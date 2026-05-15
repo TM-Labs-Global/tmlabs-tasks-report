@@ -1,0 +1,128 @@
+:root {
+  /* Font Families */
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-display: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Font Sizes (TM Labs Scale) */
+  --text-caption: 0.6875rem; /* 11px */
+  --text-label: 0.75rem; /* 12px */
+  --text-body: 0.875rem; /* 14px */
+  --text-h3: 1rem; /* 16px */
+  --text-h2: 1.125rem; /* 18px */
+  --text-h1: 1.5rem; /* 24px */
+  --text-display: 2rem; /* 32px */
+
+  /* Old scale kept for compatibility during migration if needed, but overridden */
+  --text-xs: var(--text-label);
+  --text-sm: var(--text-body);
+  --text-base: var(--text-body);
+  --text-lg: var(--text-h3);
+  --text-xl: var(--text-h2);
+  --text-2xl: var(--text-h1);
+  --text-3xl: var(--text-display);
+  --text-4xl: var(--text-display);
+  --text-5xl: var(--text-display);
+
+  /* Font Weights */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* Line Heights */
+  --leading-none: 1;
+  --leading-tight: 1.25;
+  --leading-snug: 1.375;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.625;
+  --leading-loose: 2;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--text-base);
+  line-height: var(--leading-normal);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-display);
+  font-weight: var(--weight-bold);
+  color: var(--text-base);
+  line-height: var(--leading-tight);
+}
+
+h1 {
+  font-size: var(--text-5xl);
+}
+
+h2 {
+  font-size: var(--text-4xl);
+}
+
+h3 {
+  font-size: var(--text-3xl);
+}
+
+h4 {
+  font-size: var(--text-2xl);
+}
+
+h5 {
+  font-size: var(--text-xl);
+}
+
+h6 {
+  font-size: var(--text-lg);
+}
+
+p {
+  margin-bottom: var(--spacing-4);
+  color: var(--text-secondary);
+}
+
+/* Utilities */
+
+/* Size Variants */
+.text-caption { font-size: var(--text-caption); line-height: var(--leading-normal); }
+.text-label { font-size: var(--text-label); line-height: var(--leading-normal); }
+.text-body { font-size: var(--text-body); line-height: var(--leading-normal); }
+.text-h3 { font-size: var(--text-h3); line-height: var(--leading-snug); }
+.text-h2 { font-size: var(--text-h2); line-height: var(--leading-snug); }
+.text-h1 { font-size: var(--text-h1); line-height: var(--leading-tight); }
+.text-display { font-size: var(--text-display); line-height: var(--leading-tight); }
+
+/* Old Size Variants for compatibility */
+.text-xs { font-size: var(--text-xs); line-height: var(--leading-normal); }
+.text-sm { font-size: var(--text-sm); line-height: var(--leading-normal); }
+.text-base { font-size: var(--text-base); line-height: var(--leading-normal); }
+.text-lg { font-size: var(--text-lg); line-height: var(--leading-snug); }
+.text-xl { font-size: var(--text-xl); line-height: var(--leading-snug); }
+.text-2xl { font-size: var(--text-2xl); line-height: var(--leading-tight); }
+.text-3xl { font-size: var(--text-3xl); line-height: var(--leading-tight); }
+.text-4xl { font-size: var(--text-4xl); line-height: var(--leading-tight); }
+.text-5xl { font-size: var(--text-5xl); line-height: var(--leading-tight); }
+
+/* Weight Variants */
+.font-regular { font-weight: var(--weight-regular); }
+.font-medium { font-weight: var(--weight-medium); }
+.font-semibold { font-weight: var(--weight-semibold); }
+.font-bold { font-weight: var(--weight-bold); }
+
+/* Intent Variants (Colors) */
+.text-default { color: var(--text-base); }
+.text-primary { color: var(--text-primary); }
+.text-secondary { color: var(--text-secondary); }
+.text-muted { color: var(--text-tertiary); }
+.text-brand { color: var(--text-brand); }
+.text-error { color: var(--text-error); }
+.text-success { color: var(--text-success); }
+.text-warning { color: var(--text-warning); }
+.text-info { color: var(--text-info); }
+.text-inverse { color: var(--text-inverse); }

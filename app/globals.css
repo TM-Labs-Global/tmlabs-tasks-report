@@ -1,0 +1,60 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+/* 1. Primitives */
+@import "../shared/styles/colors.css";
+@import "../shared/styles/dimensions.css";
+@import "../shared/styles/effects.css";
+
+/* 2. Semantics (depends on Primitives) */
+@import "../shared/styles/semantics.css";
+
+/* 3. Base & Components (depends on Semantics) */
+@import "../shared/styles/typography.css";
+@import "../shared/styles/button.css";
+@import "../shared/styles/input.css";
+
+@import "tailwindcss";
+
+
+
+:root {
+  --background: var(--bg-primary);
+  --foreground: var(--text-primary);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  
+  --color-primary: var(--text-primary);
+  --color-secondary: var(--bg-secondary);
+  --color-muted: var(--text-muted);
+  
+  --color-brand-pink: var(--color-brand-pink);
+  --color-brand-purple: var(--color-brand-purple);
+  --color-brand-violet: var(--color-brand-violet);
+  --color-brand-navy: var(--color-brand-navy);
+
+  --color-status-complete: var(--status-complete);
+  --color-status-in-progress: var(--status-in-progress);
+  --color-status-blocked: var(--status-blocked);
+  --color-status-todo: var(--status-todo);
+  --color-status-review: var(--status-review);
+
+  --color-priority-urgent: var(--priority-urgent);
+  --color-priority-high: var(--priority-high);
+  --color-priority-normal: var(--priority-normal);
+  --color-priority-low: var(--priority-low);
+  --color-priority-none: var(--priority-none);
+  
+  --color-card: var(--bg-card);
+  --color-elevated: var(--bg-elevated);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}

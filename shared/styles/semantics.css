@@ -1,0 +1,46 @@
+:root {
+  /* === TM Labs Dark Mode — Always On === */
+
+  /* Backgrounds */
+  --bg-primary: var(--color-slate-900);
+  --bg-secondary: var(--color-slate-800);
+  --bg-card: var(--color-slate-800);
+  --bg-elevated: #263347;
+  --bg-overlay: rgba(15, 23, 42, 0.85);
+
+  /* Text */
+  --text-primary: var(--color-slate-100);
+  --text-secondary: var(--color-slate-400);
+  --text-muted: var(--color-slate-600);
+  --text-accent: var(--color-brand-pink);
+  --text-inverse: var(--color-slate-900);
+
+  /* Borders */
+  --border-default: #263347;
+  --border-subtle: var(--color-slate-800);
+  --border-strong: var(--color-slate-700);
+  --border-focus: var(--color-brand-pink);
+
+  /* Status Colors */
+  --status-complete: var(--color-status-complete);
+  --status-in-progress: var(--color-status-in-progress);
+  --status-blocked: var(--color-status-blocked);
+  --status-todo: var(--color-status-todo);
+  --status-review: var(--color-status-review);
+
+  /* Priority Colors */
+  --priority-urgent: var(--color-priority-urgent);
+  --priority-high: var(--color-priority-high);
+  --priority-normal: var(--color-priority-normal);
+  --priority-low: var(--color-priority-low);
+  --priority-none: var(--color-priority-none);
+
+  /* Action / Accent */
+  --accent: var(--color-accent-primary);
+  --accent-hover: var(--color-accent-hover);
+  --accent-brand: var(--color-accent-brand);
+
+  /* Globals for compatibility */
+  --background: var(--bg-primary);
+  --foreground: var(--text-primary);
+}

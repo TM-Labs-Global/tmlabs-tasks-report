@@ -1,0 +1,54 @@
+:root {
+  /* TM Labs Brand Primary Palette */
+  --color-brand-pink: #FF3396;
+  --color-brand-purple: #6633FF;
+  --color-brand-violet: #4F1275;
+  --color-brand-navy: #10024F;
+
+  /* Neutral Slate Palette for App Backgrounds / Text */
+  --color-slate-50: #F8FAFC;
+  --color-slate-100: #F1F5F9;
+  --color-slate-200: #E2E8F0;
+  --color-slate-300: #CBD5E1;
+  --color-slate-400: #94A3B8;
+  --color-slate-500: #64748B;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1E293B;
+  --color-slate-900: #0F172A;
+  --color-slate-950: #020617;
+
+  /* Semantic / Status Colors */
+  --color-status-complete: #22C55E;
+  --color-status-in-progress: #F59E0B;
+  --color-status-blocked: #EF4444;
+  --color-status-todo: #94A3B8;
+  --color-status-review: #8B5CF6;
+
+  /* Priority Colors */
+  --color-priority-urgent: #EF4444;
+  --color-priority-high: #F97316;
+  --color-priority-normal: #3B82F6;
+  --color-priority-low: #94A3B8;
+  --color-priority-none: #475569;
+
+  /* KPI Card Accents */
+  --color-kpi-blue: #3B82F6;
+  --color-kpi-green: #22C55E;
+  --color-kpi-teal: #14B8A6;
+  --color-kpi-amber: #F59E0B;
+  --color-kpi-red: #EF4444;
+  --color-kpi-orange: #F97316;
+  --color-kpi-purple: #A855F7;
+  --color-kpi-indigo: #6366F1;
+
+  /* App Level Interactive Accents */
+  --color-accent-primary: #6366F1;
+  --color-accent-hover: #4F46E5;
+  --color-accent-brand: #FF3396;
+
+  /* Base */
+  --color-white: #ffffff;
+  --color-black: #000000;
+  --color-transparent: transparent;
+}

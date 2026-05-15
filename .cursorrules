@@ -1,0 +1,28 @@
+# AI Workflow & Architectural Rules
+
+You are working in a strictly modular **Feature-Sliced Design (FSD)** project. You MUST respect the following boundaries:
+
+### 1. The "Feature" Wall
+- Files inside `features/{name}` are isolated. 
+- **NEVER** import from `features/feature-A` into `features/feature-B`.
+- Features can only import from `shared/` or the `app/` composition layer.
+
+### 2. Styling Protocol
+- **STRICT**: Do not use ad-hoc hex codes in JSX.
+- **STRICT**: Branding colors must use variables from `shared/styles/semantics.css`.
+- **STRICT**: Follow the 3-layer CSS flow: `colors.css` (Values) -> `semantics.css` (Intent/Theme) -> `Component.css` (Usage).
+- When creating a new UI component in `shared/components/ui`, you MUST create a matching `.css` file in `shared/styles/`.
+
+### 3. Component Patterns
+- Use **functional components** and **TypeScript**.
+- Components in `shared/components/ui` must be **polymorphic** (handling `next/link` vs `button` etc).
+- Use `React.forwardRef` for all base UI components.
+
+### 4. File Creation
+- If a task involves a new domain, create a new folder in `features/`.
+- If a task involves a generic utility, put it in `shared/`.
+- Keep the `app/` directory exclusively for routing and layouts.
+
+### 5. Verification
+- Before finishing a task, check if you've added the correct exports to `index.ts` files in the respective directories.
+- Ensure that `globals.css` properly imports any new stylesheets created in `shared/styles/`.

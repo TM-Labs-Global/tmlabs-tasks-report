@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Next.js Template Welcome Page</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#2c685c",
+                        "background-light": "#f9fafb",
+                        "background-dark": "#1a1c21",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope", "sans-serif"],
+                        "mono": ["JetBrains Mono", "monospace"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Manrope', sans-serif; }
+        .file-tree-line::before {
+            content: "";
+            position: absolute;
+            left: -12px;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-[#131615] dark:text-gray-100 min-h-screen">
+<div class="layout-container flex flex-col">
+<!-- Top Navigation -->
+<header class="sticky top-0 z-50 w-full border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md px-6 md:px-10 py-3">
+<div class="max-w-[1200px] mx-auto flex items-center justify-between">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-3">
+<div class="size-8 bg-primary rounded-lg flex items-center justify-center text-white">
+<span class="material-symbols-outlined text-xl">deployed_code</span>
+</div>
+<h2 class="text-lg font-bold tracking-tight">Next.js <span class="text-primary">Feature</span></h2>
+</div>
+<nav class="hidden md:flex items-center gap-6">
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#architecture">Architecture</a>
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#workflow">Workflow</a>
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">Docs</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<label class="hidden sm:flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg px-3 py-1.5 w-64">
+<span class="material-symbols-outlined text-gray-400 text-lg">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm w-full placeholder:text-gray-500" placeholder="Search architecture..."/>
+</label>
+<button class="bg-primary text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">terminal</span>
+<span>Github</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Hero Section -->
+<main class="max-w-[1200px] mx-auto px-6 py-12 md:py-20">
+<div class="flex flex-col lg:flex-row gap-12 items-center mb-20">
+<div class="flex-1 space-y-6">
+<div class="inline-flex items-center gap-2 bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
+<span class="material-symbols-outlined text-xs">auto_awesome</span>
+                        Domain-Driven Architecture
+                    </div>
+<h1 class="text-5xl md:text-6xl font-extrabold leading-[1.1] tracking-tight text-gray-900 dark:text-white">
+                        Next.js <span class="text-primary">Feature-Based</span> Template
+                    </h1>
+<p class="text-lg text-gray-600 dark:text-gray-400 max-w-xl">
+                        A scalable, domain-driven structure designed for professional teams. Build maintainable applications with co-located components, hooks, and logic.
+                    </p>
+<div class="flex flex-wrap gap-4 pt-4">
+<button class="bg-primary text-white px-8 py-3 rounded-xl font-bold hover:opacity-90 transition-opacity">
+                            Get Started
+                        </button>
+<button class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-8 py-3 rounded-xl font-bold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                            Live Demo
+                        </button>
+</div>
+</div>
+<div class="flex-1 w-full max-w-xl">
+<div class="bg-[#1a1c21] rounded-xl border border-gray-700 shadow-2xl overflow-hidden font-mono text-sm leading-relaxed">
+<div class="bg-[#2c303a] px-4 py-2 flex items-center gap-2 border-b border-gray-700">
+<div class="flex gap-1.5">
+<div class="size-3 rounded-full bg-red-500/80"></div>
+<div class="size-3 rounded-full bg-yellow-500/80"></div>
+<div class="size-3 rounded-full bg-green-500/80"></div>
+</div>
+<span class="text-gray-400 text-xs ml-4">Terminal — bash</span>
+</div>
+<div class="p-6 text-gray-300">
+<div class="flex items-center gap-2 text-green-400 mb-2">
+<span class="material-symbols-outlined text-sm">folder_open</span>
+<span>src/features</span>
+</div>
+<div class="ml-6 relative space-y-1">
+<div class="flex items-center gap-2 text-primary">
+<span class="material-symbols-outlined text-sm">folder</span>
+<span>auth/</span>
+</div>
+<div class="ml-6 space-y-1 opacity-70">
+<div class="flex items-center gap-2"><span class="material-symbols-outlined text-xs">category</span><span>components/</span></div>
+<div class="flex items-center gap-2"><span class="material-symbols-outlined text-xs">anchor</span><span>hooks/</span></div>
+<div class="flex items-center gap-2"><span class="material-symbols-outlined text-xs">api</span><span>api/</span></div>
+</div>
+<div class="flex items-center gap-2 text-primary mt-2">
+<span class="material-symbols-outlined text-sm">folder</span>
+<span>dashboard/</span>
+</div>
+<div class="flex items-center gap-2 text-primary mt-2">
+<span class="material-symbols-outlined text-sm">folder</span>
+<span>profile/</span>
+</div>
+<div class="flex items-center gap-2 text-gray-500 mt-4 italic">
+<span>// Each feature is self-contained</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Architecture Section -->
+<section class="mb-24" id="architecture">
+<div class="flex items-center gap-3 mb-8">
+<span class="material-symbols-outlined text-primary text-3xl">account_tree</span>
+<h2 class="text-3xl font-bold">Understanding the Architecture</h2>
+</div>
+<div class="grid md:grid-cols-2 gap-8">
+<div class="bg-white dark:bg-gray-800 p-8 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
+<div class="size-12 bg-primary/10 text-primary rounded-xl flex items-center justify-center mb-6">
+<span class="material-symbols-outlined">grid_view</span>
+</div>
+<h3 class="text-xl font-bold mb-4">Domain Isolation</h3>
+<p class="text-gray-600 dark:text-gray-400 leading-relaxed">
+                            Instead of grouping by type (all components in one folder), we group by <strong>feature</strong>. This minimizes global state complexity and makes it easier for new developers to locate relevant logic within seconds.
+                        </p>
+</div>
+<div class="bg-white dark:bg-gray-800 p-8 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
+<div class="size-12 bg-primary/10 text-primary rounded-xl flex items-center justify-center mb-6">
+<span class="material-symbols-outlined">sync_alt</span>
+</div>
+<h3 class="text-xl font-bold mb-4">Shared vs Feature</h3>
+<p class="text-gray-600 dark:text-gray-400 leading-relaxed">
+                            Global UI elements live in <code class="bg-gray-100 dark:bg-gray-900 px-1.5 py-0.5 rounded">src/components</code>, while business-specific UI stays in <code class="bg-gray-100 dark:bg-gray-900 px-1.5 py-0.5 rounded">src/features/[name]/components</code>. Clean, predictable, and scalable.
+                        </p>
+</div>
+</div>
+</section>
+<!-- Workflow Section -->
+<section class="py-12 bg-white dark:bg-gray-900 rounded-[2rem] px-8 md:px-16 border border-gray-100 dark:border-gray-800 shadow-xl" id="workflow">
+<div class="max-w-4xl mx-auto">
+<div class="text-center space-y-4 mb-16">
+<h2 class="text-4xl font-black tracking-tight">AI-Enhanced Development Workflow</h2>
+<p class="text-gray-500 dark:text-gray-400">Streamline your UI construction with high-fidelity AI generation and feature-based integration.</p>
+</div>
+<div class="space-y-12 relative">
+<!-- Step 1 -->
+<div class="flex flex-col md:flex-row gap-8 relative z-10">
+<div class="flex-none flex items-start justify-center">
+<div class="size-10 bg-primary text-white rounded-full flex items-center justify-center font-bold">1</div>
+</div>
+<div class="space-y-3">
+<h4 class="text-xl font-bold">Generate UI/UX in AI</h4>
+<p class="text-gray-600 dark:text-gray-400">
+                                    Use modern LLMs to generate individual feature modules. Define your requirements for a specific domain (e.g., "Generate a user settings dashboard") and let the AI output clean Tailwind-ready code.
+                                </p>
+<div class="bg-background-light dark:bg-gray-800 p-4 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 mt-4">
+<span class="text-xs font-mono text-primary uppercase font-bold">Recommended Prompt</span>
+<p class="text-sm italic text-gray-500 mt-2">"Generate a responsive Next.js functional component for a profile billing section using Tailwind CSS. Use clean variables for spacing..."</p>
+</div>
+</div>
+</div>
+<!-- Step 2 -->
+<div class="flex flex-col md:flex-row gap-8 relative z-10">
+<div class="flex-none flex items-start justify-center">
+<div class="size-10 bg-primary/20 text-primary rounded-full flex items-center justify-center font-bold">2</div>
+</div>
+<div class="space-y-3">
+<h4 class="text-xl font-bold">Import and Map</h4>
+<p class="text-gray-600 dark:text-gray-400">
+                                    Take the generated code and place it directly into the relevant feature directory. Map the AI's placeholders to your feature-specific hooks and API endpoints.
+                                </p>
+</div>
+</div>
+<!-- Step 3 -->
+<div class="flex flex-col md:flex-row gap-8 relative z-10">
+<div class="flex-none flex items-start justify-center">
+<div class="size-10 bg-primary/20 text-primary rounded-full flex items-center justify-center font-bold">3</div>
+</div>
+<div class="space-y-3">
+<h4 class="text-xl font-bold">Iterative Refinement</h4>
+<p class="text-gray-600 dark:text-gray-400">
+                                    Use iterative prompting to refine details like form validation or complex interactions. Keep your prompts atomic—one component or one hook at a time to maintain high quality.
+                                </p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Bottom CTA -->
+<div class="mt-32 text-center space-y-8 pb-20">
+<div class="size-20 bg-primary/5 mx-auto rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-4xl">rocket_launch</span>
+</div>
+<h2 class="text-3xl font-bold">Ready to build your next big thing?</h2>
+<div class="flex justify-center gap-4">
+<button class="bg-primary text-white px-10 py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-primary/20 transition-all">
+                        Initialize Repository
+                    </button>
+</div>
+<p class="text-sm text-gray-400 font-mono">npx create-next-app --template feature-based</p>
+</div>
+</main>
+<!-- Footer -->
+<footer class="border-t border-gray-200 dark:border-gray-800 py-10 px-6">
+<div class="max-w-[1200px] mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+<div class="flex items-center gap-2">
+<div class="size-6 bg-primary rounded flex items-center justify-center text-white text-[10px]">
+<span class="material-symbols-outlined text-xs">deployed_code</span>
+</div>
+<span class="font-bold">Next.js Feature</span>
+</div>
+<div class="flex gap-8 text-sm text-gray-500">
+<a class="hover:text-primary" href="#">Twitter</a>
+<a class="hover:text-primary" href="#">Discord</a>
+<a class="hover:text-primary" href="#">Sponsors</a>
+</div>
+<p class="text-sm text-gray-400">© 2024. Open Source under MIT.</p>
+</div>
+</footer>
+</div>
+</body></html>
