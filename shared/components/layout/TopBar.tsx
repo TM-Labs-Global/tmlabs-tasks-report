@@ -9,7 +9,7 @@ import { useFilters } from '@/shared/context/FilterContext';
 export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   const pathname = usePathname();
 
-  const { token, isLoading, refreshData } = useClickUp();
+  const { isLoading, isConfigured, refreshData } = useClickUp();
   const { isFiltered, resetFilters } = useFilters();
 
   const getTitle = () => {
@@ -52,7 +52,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
       {/* Actions */}
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2 mr-4">
-          {token ? (
+          {isConfigured ? (
             <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20">
               <Circle size={6} className="fill-green-500 text-green-500" />
               <span className="text-[10px] font-bold text-green-500 uppercase tracking-widest">Live Sync Active</span>
@@ -67,7 +67,8 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
 
         <button 
           onClick={refreshData}
-          disabled={isLoading || !token}
+          disabled={isLoading || !isConfigured}
+
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-caption font-bold transition-all shadow-sm ${isLoading ? 'bg-secondary text-muted' : 'bg-brand-pink text-white hover:bg-opacity-90 hover:scale-105 shadow-brand-pink/20'}`}
         >
           {isLoading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
