@@ -14,11 +14,12 @@ import { useFilters } from '@/shared/context/FilterContext';
 import { TeamWorkloadChart } from '@/shared/components/charts/TeamWorkloadChart';
 
 export default function TeamPerformance() {
-  const { members, isLoading, error, token } = useClickUp();
+  const { members, isLoading, error, isConfigured } = useClickUp();
   const tasks = useFilteredTasks();
   const { filters, setFilters } = useFilters();
 
-  if (!token) return <SetupScreen />;
+  if (!isConfigured && !isLoading) return <SetupScreen />;
+
   if (isLoading) return (
     <div className="flex flex-col items-center justify-center h-[80vh] space-y-4">
       <Loader2 className="w-8 h-8 text-brand-pink animate-spin" />

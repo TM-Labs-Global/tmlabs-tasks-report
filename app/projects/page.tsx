@@ -14,11 +14,12 @@ import { TaskTable } from '@/shared/components/tables/TaskTable';
 import { ProjectDetail } from '@/shared/components/projects/ProjectDetail';
 
 export default function ProjectHealth() {
-  const { isLoading, error, token } = useClickUp();
+  const { isLoading, error, isConfigured } = useClickUp();
   const tasks = useFilteredTasks();
   const { filters, setFilters, resetFilters } = useFilters();
 
-  if (!token) return <SetupScreen />;
+  if (!isConfigured && !isLoading) return <SetupScreen />;
+
   if (isLoading) return (
     <div className="flex flex-col items-center justify-center h-[80vh] space-y-4">
       <Loader2 className="w-8 h-8 text-brand-pink animate-spin" />

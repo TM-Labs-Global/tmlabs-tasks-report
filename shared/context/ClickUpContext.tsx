@@ -7,6 +7,7 @@ interface ClickUpContextType {
   token: string | null;
   setToken: (token: string) => void;
   isLoading: boolean;
+  isConfigured: boolean;
   error: string | null;
   tasks: any[];
   members: any[];
@@ -20,21 +21,18 @@ const ClickUpContext = createContext<ClickUpContextType | undefined>(undefined);
 
 export function ClickUpProvider({ children }: { children: React.ReactNode }) {
   const [token, setTokenState] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isConfigured, setIsConfigured] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tasks, setTasks] = useState<any[]>([]);
   const [members, setMembers] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
 
-  // Initialize token from .env or localStorage
+  // Initialize token from localStorage
   useEffect(() => {
-    const envToken = process.env.NEXT_PUBLIC_CLICKUP_API_TOKEN;
     const storedToken = localStorage.getItem('clickup_token');
-    
-    if (envToken) {
-      setTokenState(envToken);
-    } else if (storedToken) {
+    if (storedToken) {
       setTokenState(storedToken);
     }
   }, []);
@@ -74,18 +72,18 @@ export function ClickUpProvider({ children }: { children: React.ReactNode }) {
         },
         start_date: task.start_date ? parseInt(task.start_date) : null,
         due_date_raw: dueDate
-
       };
     });
   };
 
-  const fetchData = useCallback(async (tokenToUse: string, teamId: string, teamMembers: any[]) => {
+  const fetchData = useCallback(async (tokenToUse: string | null, teamId: string, teamMembers: any[]) => {
     setIsLoading(true);
     setError(null);
     try {
-      const rawTasks = await ClickUpAPI.getAllTasks(teamId, tokenToUse);
+      const rawTasks = await ClickUpAPI.getAllTasks(teamId, tokenToUse || '');
       setTasks(normalizeTasks(rawTasks));
       setMembers(teamMembers || []);
+      setIsConfigured(true);
     } catch (err: any) {
       console.error('Fetch Data Error:', err);
       setError(err.message || 'Failed to fetch dashboard data');
@@ -95,38 +93,36 @@ export function ClickUpProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const refreshData = async () => {
-    if (token && selectedTeamId) {
+    if (selectedTeamId) {
       const currentTeam = teams.find((t: any) => t.id === selectedTeamId);
       await fetchData(token, selectedTeamId, currentTeam?.members || []);
     }
-
   };
 
-  // When token changes, fetch teams
+  // Initialize workspace
   useEffect(() => {
-    if (!token) return;
-
     const initWorkspace = async () => {
       setIsLoading(true);
       setError(null);
       try {
-        const teamsData = await ClickUpAPI.getTeams(token);
+        const teamsData = await ClickUpAPI.getTeams(token || '');
         const teamsList: any[] = teamsData.teams || [];
         setTeams(teamsList);
         
-        const envTeamId = process.env.NEXT_PUBLIC_CLICKUP_TEAM_ID;
-        const selectedTeam = teamsList.find((t: any) => t.id === envTeamId) || teamsList[0];
-
+        const selectedTeam = teamsList[0];
         
         if (selectedTeam) {
           setSelectedTeamId(selectedTeam.id);
           await fetchData(token, selectedTeam.id, selectedTeam.members || []);
         } else {
-          throw new Error('No ClickUp Workspace found for this token.');
+          setIsConfigured(false);
+          // Don't throw error if token is null, just show setup screen
+          if (token) throw new Error('No ClickUp Workspace found for this token.');
         }
       } catch (err: any) {
         console.error('ClickUp Init Error:', err);
         setError(err.message || 'Failed to connect to ClickUp. Check your API token.');
+        setIsConfigured(false);
       } finally {
         setIsLoading(false);
       }
@@ -135,23 +131,23 @@ export function ClickUpProvider({ children }: { children: React.ReactNode }) {
     initWorkspace();
   }, [token, fetchData]);
 
-  // Automated live-sync (polling every 60 seconds)
+  // Automated live-sync
   useEffect(() => {
-    if (!token || !selectedTeamId || isLoading) return;
+    if (!isConfigured || isLoading) return;
     
     const interval = setInterval(() => {
-      console.log('Automated sync: Refreshing ClickUp data...');
       refreshData();
-    }, 60000); // 1 minute
+    }, 60000);
     
     return () => clearInterval(interval);
-  }, [token, selectedTeamId, refreshData, isLoading]);
+  }, [isConfigured, refreshData, isLoading]);
 
   return (
     <ClickUpContext.Provider value={{ 
       token, 
       setToken, 
       isLoading, 
+      isConfigured,
       error, 
       tasks, 
       members, 

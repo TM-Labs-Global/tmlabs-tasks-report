@@ -24,10 +24,11 @@ import {
 import { SetupScreen } from '@/shared/components/ui/SetupScreen';
 
 export default function Home() {
-  const { members, isLoading, error, token } = useClickUp();
+  const { members, isLoading, error, isConfigured } = useClickUp();
   const tasks = useFilteredTasks();
 
-  if (!token) return <SetupScreen />;
+  if (!isConfigured && !isLoading) return <SetupScreen />;
+
 
   if (isLoading) {
     return (

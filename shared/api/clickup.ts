@@ -1,36 +1,39 @@
-const BASE_URL = 'https://api.clickup.com/api/v2';
-
 /**
- * Standard fetcher for ClickUp API
+ * Standard fetcher that routes through our internal proxy to hide tokens
  */
-async function clickupFetch(endpoint: string, token: string) {
-  const response = await fetch(`${BASE_URL}${endpoint}`, {
+async function proxyFetch(endpoint: string, token: string) {
+  const response = await fetch('/api/clickup', {
+    method: 'POST',
     headers: {
-      'Authorization': token,
       'Content-Type': 'application/json',
     },
+    body: JSON.stringify({
+      endpoint,
+      customToken: token // Still pass the token if the user provided one manually
+    }),
   });
 
+  const data = await response.json();
+  
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.err || `ClickUp API error: ${response.status} at ${endpoint}`);
+    throw new Error(data.error || `Proxy error: ${response.status}`);
   }
 
-  return response.json();
+  return data;
 }
 
 /**
  * Fetches all teams (workspaces) for the given token
  */
 export async function getTeams(token: string) {
-  return clickupFetch('/team', token);
+  return proxyFetch('/team', token);
 }
 
 /**
  * Fetches all members for a specific team
  */
 export async function getTeamMembers(teamId: string, token: string) {
-  return clickupFetch(`/team/${teamId}/member`, token);
+  return proxyFetch(`/team/${teamId}/member`, token);
 }
 
 /**
@@ -42,16 +45,17 @@ export async function getAllTasks(teamId: string, token: string) {
   let isLastPage = false;
 
   while (!isLastPage) {
-    const data = await clickupFetch(
+    const data = await proxyFetch(
       `/team/${teamId}/task?page=${page}&subtasks=true&include_closed=true`,
       token
     );
+    
+    if (!data.tasks) break;
     
     allTasks = [...allTasks, ...data.tasks];
     isLastPage = data.last_page;
     page++;
     
-    // Safety break to prevent infinite loops in development
     if (page > 50) break; 
   }
 
@@ -62,6 +66,6 @@ export async function getAllTasks(teamId: string, token: string) {
  * Fetches spaces, folders, and lists to build the project hierarchy
  */
 export async function getWorkspaceHierarchy(teamId: string, token: string) {
-  const spacesData = await clickupFetch(`/team/${teamId}/space`, token);
-  return spacesData.spaces;
+  const data = await proxyFetch(`/team/${teamId}/space`, token);
+  return data.spaces;
 }
