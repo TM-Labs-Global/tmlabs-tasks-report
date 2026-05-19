@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { RefreshCw, Moon, Circle, Loader2, X, Menu } from 'lucide-react';
 import { useClickUp } from '@/shared/context/ClickUpContext';
@@ -8,6 +8,14 @@ import { useFilters } from '@/shared/context/FilterContext';
 
 export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   const pathname = usePathname();
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then(res => res.json())
+      .then(data => { if (data.authenticated) setUserEmail(data.email); })
+      .catch(() => {});
+  }, []);
 
   const { isLoading, isConfigured, refreshData } = useClickUp();
   const { isFiltered, resetFilters } = useFilters();
@@ -17,6 +25,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
     if (pathname === '/reporting') return 'Reporting Center';
     if (pathname === '/team') return 'Team Performance';
     if (pathname === '/projects') return 'Project Health';
+    if (pathname === '/logs') return 'Audit Logs';
     return 'TM Labs Dashboard';
   };
 
@@ -76,6 +85,17 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
         </button>
 
         <div className="w-px h-6 bg-slate-700/20 mx-1" />
+
+        {userEmail && (
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-elevated border border-slate-700/20">
+            <div className="w-6 h-6 rounded-full bg-brand-pink/20 text-brand-pink flex items-center justify-center font-bold text-xs uppercase flex-shrink-0">
+              {userEmail[0]}
+            </div>
+            <span className="text-caption font-semibold text-primary max-w-[140px] truncate" title={userEmail}>
+              {userEmail}
+            </span>
+          </div>
+        )}
 
         <button className="p-2 rounded-lg text-secondary hover:bg-elevated hover:text-primary transition-colors">
           <Moon size={20} />

@@ -27,9 +27,6 @@ export default function Home() {
   const { members, isLoading, error, isConfigured } = useClickUp();
   const tasks = useFilteredTasks();
 
-  if (!isConfigured && !isLoading) return <SetupScreen />;
-
-
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-[80vh] space-y-4">
@@ -44,10 +41,14 @@ export default function Home() {
       <div className="flex flex-col items-center justify-center h-[80vh] text-center space-y-4 text-red-500">
         <Ban size={48} />
         <p className="text-h2 font-bold">{error}</p>
-        <button onClick={() => window.location.reload()} className="px-4 py-2 bg-brand-pink text-white rounded-lg">Try Again</button>
+        <button onClick={() => window.location.reload()} className="px-4 py-2 bg-brand-pink text-white rounded-lg font-semibold hover:bg-opacity-90 transition-all">
+          Try Again
+        </button>
       </div>
     );
   }
+
+  if (!isConfigured) return <SetupScreen />;
 
   // --- Metrics Calculation ---
   const now = new Date();

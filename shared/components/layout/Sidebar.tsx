@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useClickUp } from '@/shared/context/ClickUpContext';
@@ -12,6 +12,7 @@ import {
   ChevronLeft, 
   ChevronRight,
   LogOut,
+  History,
   User as UserIcon
 } from 'lucide-react';
 
@@ -20,12 +21,25 @@ const navItems = [
   { name: 'Reporting Center', href: '/reporting', icon: ClipboardList },
   { name: 'Team Performance', href: '/team', icon: Users },
   { name: 'Project Health', href: '/projects', icon: FolderKanban },
+  { name: 'Audit Logs', href: '/logs', icon: History },
 ];
 
 export function Sidebar({ isOpen, onClose }: { isOpen?: boolean, onClose?: () => void }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const pathname = usePathname();
   const { token, teams, selectedTeamId, setToken } = useClickUp();
+
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then(res => res.json())
+      .then(data => {
+        if (data.authenticated) {
+          setUserEmail(data.email);
+        }
+      })
+      .catch(err => console.error('Error fetching user session:', err));
+  }, []);
 
   const selectedTeam = teams.find(t => t.id === selectedTeamId);
 
@@ -97,21 +111,38 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean, onClose?: () =>
             </div>
           </div>
         )}
-        
-        {token && (
-          <button
-            onClick={() => {
-              if (confirm('Are you sure you want to logout?')) {
-                setToken('');
-                window.location.reload();
-              }
-            }}
-            className="w-full flex items-center p-2 rounded-lg text-secondary hover:bg-red-500/10 hover:text-red-500 transition-colors group"
-          >
-            <LogOut size={20} className="group-hover:text-red-500" />
-            {!isCollapsed && <span className="ml-3 text-body font-medium">Logout</span>}
-          </button>
+
+        {!isCollapsed && userEmail && (
+          <div className="mb-2 px-2 py-2 rounded-lg bg-elevated/40 border border-slate-700/10 flex items-center gap-2 overflow-hidden">
+            <div className="w-8 h-8 rounded-full bg-brand-pink/20 text-brand-pink flex items-center justify-center font-bold text-sm uppercase flex-shrink-0">
+              {userEmail[0]}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[10px] text-muted uppercase tracking-widest font-bold">User Session</div>
+              <div className="text-caption font-semibold text-primary truncate" title={userEmail}>
+                {userEmail}
+              </div>
+            </div>
+          </div>
         )}
+        
+        <button
+          onClick={async () => {
+            if (confirm('Are you sure you want to logout?')) {
+              try {
+                await fetch('/api/auth/logout', { method: 'POST' });
+              } catch (err) {
+                console.error('Logout error:', err);
+              }
+              setToken('');
+              window.location.href = '/login';
+            }
+          }}
+          className="w-full flex items-center p-2 rounded-lg text-secondary hover:bg-red-500/10 hover:text-red-500 transition-colors group"
+        >
+          <LogOut size={20} className="group-hover:text-red-500" />
+          {!isCollapsed && <span className="ml-3 text-body font-medium">Logout</span>}
+        </button>
 
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
