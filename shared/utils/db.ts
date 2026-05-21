@@ -27,7 +27,19 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const isSupabaseConfigured = () => {
-  return !!(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return false;
+  
+  const placeholders = [
+    'your-project-ref',
+    'your-service-role-key',
+    'project-ref-here'
+  ];
+  
+  const isPlaceholder = placeholders.some(
+    p => SUPABASE_URL.includes(p) || SUPABASE_SERVICE_ROLE_KEY.includes(p)
+  );
+  
+  return !isPlaceholder;
 };
 
 // --- Helper for Supabase Headers ---
@@ -86,10 +98,14 @@ export async function saveOTP(email: string, code: string, expiresAt: number): P
   if (isSupabaseConfigured()) {
     try {
       // 1. Delete any existing OTP first to avoid unique constraint issues
-      await fetch(`${SUPABASE_URL}/rest/v1/otps?email=eq.${encodeURIComponent(normalizedEmail)}`, {
+      const delRes = await fetch(`${SUPABASE_URL}/rest/v1/otps?email=eq.${encodeURIComponent(normalizedEmail)}`, {
         method: 'DELETE',
         headers: getSupabaseHeaders(),
       });
+      if (!delRes.ok) {
+        const errText = await delRes.text();
+        throw new Error(`Supabase error deleting old OTP: ${errText}`);
+      }
 
       // 2. Insert new OTP record
       const res = await fetch(`${SUPABASE_URL}/rest/v1/otps`, {
@@ -106,11 +122,17 @@ export async function saveOTP(email: string, code: string, expiresAt: number): P
         const errText = await res.text();
         throw new Error(`Supabase error saving OTP: ${errText}`);
       }
-    } catch (err) {
-      console.error('Supabase saveOTP failed. Falling back to local file.', err);
+    } catch (err: any) {
+      console.error('Supabase saveOTP failed.', err);
+      if (process.env.NETLIFY === 'true' || process.env.VERCEL === 'true') {
+        throw err;
+      }
       await saveOTPLocal(normalizedEmail, code, expiresAt);
     }
   } else {
+    if (process.env.NETLIFY === 'true' || process.env.VERCEL === 'true') {
+      throw new Error('Supabase is not configured in this production serverless environment.');
+    }
     await saveOTPLocal(normalizedEmail, code, expiresAt);
   }
 }
@@ -138,7 +160,8 @@ export async function getOTP(email: string): Promise<OTPRecord | null> {
       });
 
       if (!res.ok) {
-        throw new Error('Supabase fetch OTP failed');
+        const errText = await res.text();
+        throw new Error(`Supabase fetch OTP failed: ${errText}`);
       }
 
       const data = await res.json();
@@ -151,11 +174,17 @@ export async function getOTP(email: string): Promise<OTPRecord | null> {
         };
       }
       return null;
-    } catch (err) {
-      console.error('Supabase getOTP failed. Falling back to local file.', err);
+    } catch (err: any) {
+      console.error('Supabase getOTP failed.', err);
+      if (process.env.NETLIFY === 'true' || process.env.VERCEL === 'true') {
+        throw err;
+      }
       return getOTPLocal(normalizedEmail);
     }
   } else {
+    if (process.env.NETLIFY === 'true' || process.env.VERCEL === 'true') {
+      throw new Error('Supabase is not configured in this production serverless environment.');
+    }
     return getOTPLocal(normalizedEmail);
   }
 }
@@ -174,15 +203,25 @@ export async function deleteOTP(email: string): Promise<void> {
 
   if (isSupabaseConfigured()) {
     try {
-      await fetch(`${SUPABASE_URL}/rest/v1/otps?email=eq.${encodeURIComponent(normalizedEmail)}`, {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/otps?email=eq.${encodeURIComponent(normalizedEmail)}`, {
         method: 'DELETE',
         headers: getSupabaseHeaders()
       });
-    } catch (err) {
-      console.error('Supabase deleteOTP failed. Falling back to local file.', err);
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Supabase deleteOTP failed: ${errText}`);
+      }
+    } catch (err: any) {
+      console.error('Supabase deleteOTP failed.', err);
+      if (process.env.NETLIFY === 'true' || process.env.VERCEL === 'true') {
+        throw err;
+      }
       await deleteOTPLocal(normalizedEmail);
     }
   } else {
+    if (process.env.NETLIFY === 'true' || process.env.VERCEL === 'true') {
+      throw new Error('Supabase is not configured in this production serverless environment.');
+    }
     await deleteOTPLocal(normalizedEmail);
   }
 }
@@ -220,11 +259,17 @@ export async function addLog(email: string): Promise<string> {
         throw new Error(`Supabase logs insert failed: ${errText}`);
       }
       return logId;
-    } catch (err) {
-      console.error('Supabase addLog failed. Falling back to local file.', err);
+    } catch (err: any) {
+      console.error('Supabase addLog failed.', err);
+      if (process.env.NETLIFY === 'true' || process.env.VERCEL === 'true') {
+        throw err;
+      }
       return addLogLocal(logId, normalizedEmail, loginTime);
     }
   } else {
+    if (process.env.NETLIFY === 'true' || process.env.VERCEL === 'true') {
+      throw new Error('Supabase is not configured in this production serverless environment.');
+    }
     return addLogLocal(logId, normalizedEmail, loginTime);
   }
 }
@@ -261,11 +306,17 @@ export async function updateLogoutTime(logId: string): Promise<void> {
         const errText = await res.text();
         throw new Error(`Supabase logs update failed: ${errText}`);
       }
-    } catch (err) {
-      console.error('Supabase updateLogoutTime failed. Falling back to local file.', err);
+    } catch (err: any) {
+      console.error('Supabase updateLogoutTime failed.', err);
+      if (process.env.NETLIFY === 'true' || process.env.VERCEL === 'true') {
+        throw err;
+      }
       await updateLogoutTimeLocal(logId, logoutTime);
     }
   } else {
+    if (process.env.NETLIFY === 'true' || process.env.VERCEL === 'true') {
+      throw new Error('Supabase is not configured in this production serverless environment.');
+    }
     await updateLogoutTimeLocal(logId, logoutTime);
   }
 }
@@ -291,7 +342,8 @@ export async function getAllLogs(): Promise<LogRecord[]> {
       });
 
       if (!res.ok) {
-        throw new Error('Supabase fetch logs failed');
+        const errText = await res.text();
+        throw new Error(`Supabase fetch logs failed: ${errText}`);
       }
 
       const data = await res.json();
@@ -304,11 +356,17 @@ export async function getAllLogs(): Promise<LogRecord[]> {
         }));
       }
       return [];
-    } catch (err) {
-      console.error('Supabase getAllLogs failed. Falling back to local file.', err);
+    } catch (err: any) {
+      console.error('Supabase getAllLogs failed.', err);
+      if (process.env.NETLIFY === 'true' || process.env.VERCEL === 'true') {
+        throw err;
+      }
       return getAllLogsLocal();
     }
   } else {
+    if (process.env.NETLIFY === 'true' || process.env.VERCEL === 'true') {
+      throw new Error('Supabase is not configured in this production serverless environment.');
+    }
     return getAllLogsLocal();
   }
 }

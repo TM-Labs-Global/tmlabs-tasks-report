@@ -30,9 +30,22 @@ export async function POST(request: Request) {
 
     await saveOTP(email, code, expiresAt);
 
-    // Check if SMTP is configured
+    // Check if SMTP is configured (ignoring placeholders)
     const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM } = process.env;
-    const isSMTPConfigured = !!(SMTP_HOST && SMTP_PORT && SMTP_USER && SMTP_PASS && SMTP_FROM);
+    
+    const smtpPlaceholders = [
+      'smtp.your-provider.com',
+      'your-smtp-username',
+      'your-smtp-password'
+    ];
+    
+    const isSMTPConfigured = !!(
+      SMTP_HOST && !smtpPlaceholders.some(p => SMTP_HOST.includes(p)) &&
+      SMTP_PORT &&
+      SMTP_USER && !smtpPlaceholders.some(p => SMTP_USER.includes(p)) &&
+      SMTP_PASS && !smtpPlaceholders.some(p => SMTP_PASS.includes(p)) &&
+      SMTP_FROM
+    );
 
     if (isSMTPConfigured) {
       try {
