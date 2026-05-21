@@ -42,6 +42,14 @@ const isSupabaseConfigured = () => {
   return !isPlaceholder;
 };
 
+const isServerlessProduction = () => {
+  return (
+    process.env.NODE_ENV === 'production' ||
+    process.env.NETLIFY === 'true' ||
+    process.env.VERCEL === 'true'
+  );
+};
+
 // --- Helper for Supabase Headers ---
 function getSupabaseHeaders() {
   return {
@@ -124,13 +132,13 @@ export async function saveOTP(email: string, code: string, expiresAt: number): P
       }
     } catch (err: any) {
       console.error('Supabase saveOTP failed.', err);
-      if (process.env.NETLIFY === 'true' || process.env.VERCEL === 'true') {
+      if (isServerlessProduction()) {
         throw err;
       }
       await saveOTPLocal(normalizedEmail, code, expiresAt);
     }
   } else {
-    if (process.env.NETLIFY === 'true' || process.env.VERCEL === 'true') {
+    if (isServerlessProduction()) {
       throw new Error('Supabase is not configured in this production serverless environment.');
     }
     await saveOTPLocal(normalizedEmail, code, expiresAt);
@@ -176,13 +184,13 @@ export async function getOTP(email: string): Promise<OTPRecord | null> {
       return null;
     } catch (err: any) {
       console.error('Supabase getOTP failed.', err);
-      if (process.env.NETLIFY === 'true' || process.env.VERCEL === 'true') {
+      if (isServerlessProduction()) {
         throw err;
       }
       return getOTPLocal(normalizedEmail);
     }
   } else {
-    if (process.env.NETLIFY === 'true' || process.env.VERCEL === 'true') {
+    if (isServerlessProduction()) {
       throw new Error('Supabase is not configured in this production serverless environment.');
     }
     return getOTPLocal(normalizedEmail);
@@ -213,13 +221,13 @@ export async function deleteOTP(email: string): Promise<void> {
       }
     } catch (err: any) {
       console.error('Supabase deleteOTP failed.', err);
-      if (process.env.NETLIFY === 'true' || process.env.VERCEL === 'true') {
+      if (isServerlessProduction()) {
         throw err;
       }
       await deleteOTPLocal(normalizedEmail);
     }
   } else {
-    if (process.env.NETLIFY === 'true' || process.env.VERCEL === 'true') {
+    if (isServerlessProduction()) {
       throw new Error('Supabase is not configured in this production serverless environment.');
     }
     await deleteOTPLocal(normalizedEmail);
@@ -261,13 +269,13 @@ export async function addLog(email: string): Promise<string> {
       return logId;
     } catch (err: any) {
       console.error('Supabase addLog failed.', err);
-      if (process.env.NETLIFY === 'true' || process.env.VERCEL === 'true') {
+      if (isServerlessProduction()) {
         throw err;
       }
       return addLogLocal(logId, normalizedEmail, loginTime);
     }
   } else {
-    if (process.env.NETLIFY === 'true' || process.env.VERCEL === 'true') {
+    if (isServerlessProduction()) {
       throw new Error('Supabase is not configured in this production serverless environment.');
     }
     return addLogLocal(logId, normalizedEmail, loginTime);
@@ -308,13 +316,13 @@ export async function updateLogoutTime(logId: string): Promise<void> {
       }
     } catch (err: any) {
       console.error('Supabase updateLogoutTime failed.', err);
-      if (process.env.NETLIFY === 'true' || process.env.VERCEL === 'true') {
+      if (isServerlessProduction()) {
         throw err;
       }
       await updateLogoutTimeLocal(logId, logoutTime);
     }
   } else {
-    if (process.env.NETLIFY === 'true' || process.env.VERCEL === 'true') {
+    if (isServerlessProduction()) {
       throw new Error('Supabase is not configured in this production serverless environment.');
     }
     await updateLogoutTimeLocal(logId, logoutTime);
@@ -358,13 +366,13 @@ export async function getAllLogs(): Promise<LogRecord[]> {
       return [];
     } catch (err: any) {
       console.error('Supabase getAllLogs failed.', err);
-      if (process.env.NETLIFY === 'true' || process.env.VERCEL === 'true') {
+      if (isServerlessProduction()) {
         throw err;
       }
       return getAllLogsLocal();
     }
   } else {
-    if (process.env.NETLIFY === 'true' || process.env.VERCEL === 'true') {
+    if (isServerlessProduction()) {
       throw new Error('Supabase is not configured in this production serverless environment.');
     }
     return getAllLogsLocal();

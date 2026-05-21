@@ -248,6 +248,7 @@ export default function LoginPage() {
                         onChange={e => handleOtpChange(index, e.target.value)}
                         onKeyDown={e => handleOtpKeyDown(index, e)}
                         disabled={isLoading}
+                        autoComplete="one-time-code"
                         className={`
                           w-12 h-14 text-center text-xl font-bold rounded-xl border transition-all
                           bg-elevated text-primary
