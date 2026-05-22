@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { useClickUp } from '@/shared/context/ClickUpContext';
-import { useFilters } from '@/shared/context/FilterContext';
+import { useFilters, getDefaultDateRange } from '@/shared/context/FilterContext';
 
 export function useFilteredTasks() {
   const { tasks } = useClickUp();
@@ -33,21 +33,30 @@ export function useFilteredTasks() {
         }
       }
 
-      // Date Range Filter
-      if (filters.startDate && filters.endDate) {
-        const start = new Date(filters.startDate).getTime();
-        const end = new Date(filters.endDate).getTime();
-        
-        const taskDate = task.date_closed ? parseInt(task.date_closed) : (task.dueDate ? new Date(task.dueDate).getTime() : null);
-        
-        if (taskDate) {
-          if (taskDate < start || taskDate > end) {
-            return false;
-          }
-        } else {
-          // If no date at all, it shouldn't show in a date-filtered view unless it's a very broad search
-          return false;
-        }
+      // Date Range Filter (either dueDate OR date_closed falls in the range)
+      const startStr = filters.startDate;
+      const endStr = filters.endDate;
+      
+      let start: number;
+      let end: number;
+      
+      if (startStr && endStr) {
+        start = new Date(startStr).getTime();
+        end = new Date(endStr).getTime();
+      } else {
+        const defaultRange = getDefaultDateRange();
+        start = new Date(defaultRange.start).getTime();
+        end = new Date(defaultRange.end).getTime();
+      }
+      
+      const taskDueDate = task.dueDate ? new Date(task.dueDate).getTime() : (task.due_date_raw ? new Date(task.due_date_raw).getTime() : null);
+      const taskClosedDate = task.date_closed ? parseInt(task.date_closed) : null;
+      
+      const dueInRange = taskDueDate && taskDueDate >= start && taskDueDate <= end;
+      const closedInRange = taskClosedDate && taskClosedDate >= start && taskClosedDate <= end;
+      
+      if (!dueInRange && !closedInRange) {
+        return false;
       }
 
       // Search Filter

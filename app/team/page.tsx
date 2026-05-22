@@ -7,11 +7,13 @@ import { MetricCard } from '@/shared/components/cards/MetricCard';
 import { TaskTable } from '@/shared/components/tables/TaskTable';
 import { 
   Users, 
-  Loader2
+  Loader2,
+  FileSpreadsheet
 } from 'lucide-react';
 import { SetupScreen } from '@/shared/components/ui/SetupScreen';
 import { useFilters } from '@/shared/context/FilterContext';
 import { TeamWorkloadChart } from '@/shared/components/charts/TeamWorkloadChart';
+import { generateStyledReport } from '@/shared/utils/excelReport';
 
 export default function TeamPerformance() {
   const { members, isLoading, error, isConfigured } = useClickUp();
@@ -52,11 +54,30 @@ export default function TeamPerformance() {
 
   const chartData = memberStats.map(s => ({ name: s.user.username, tasks: s.taskCount }));
 
+  const handleExport = () => {
+    const start = filters.startDate ? new Date(filters.startDate) : new Date();
+    const end = filters.endDate ? new Date(filters.endDate) : new Date();
+    const label = filters.startDate && filters.endDate 
+      ? `Team Workload (${new Date(filters.startDate).toLocaleDateString()} - ${new Date(filters.endDate).toLocaleDateString()})`
+      : 'Team Workload Report';
+    
+    generateStyledReport(tasks, 'monthly', label, start, end, true, 'assignee');
+  };
+
   return (
     <div className="space-y-8 pb-12">
-      <div className="space-y-1">
-        <h1 className="text-h1 font-bold text-primary">Team Performance</h1>
-        <p className="text-body text-secondary">Workload and output per team member</p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="space-y-1">
+          <h1 className="text-h1 font-bold text-primary">Team Performance</h1>
+          <p className="text-body text-secondary">Workload and output per team member</p>
+        </div>
+        <button 
+          onClick={handleExport}
+          className="gap-2 px-4 py-2.5 bg-brand-navy border border-slate-700/30 rounded-xl text-caption font-bold text-primary hover:bg-slate-700/40 transition-colors shadow-lg shadow-brand-navy/10 flex items-center"
+        >
+          <FileSpreadsheet size={18} className="text-brand-pink" />
+          Export Report
+        </button>
       </div>
 
       {/* Comparison Chart */}

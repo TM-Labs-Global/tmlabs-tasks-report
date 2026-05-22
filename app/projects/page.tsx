@@ -6,12 +6,14 @@ import { useFilteredTasks } from '@/shared/hooks/useFilteredTasks';
 import { 
   FolderKanban, 
   Loader2,
-  ArrowLeft
+  ArrowLeft,
+  FileSpreadsheet
 } from 'lucide-react';
 import { SetupScreen } from '@/shared/components/ui/SetupScreen';
 import { useFilters } from '@/shared/context/FilterContext';
 import { TaskTable } from '@/shared/components/tables/TaskTable';
 import { ProjectDetail } from '@/shared/components/projects/ProjectDetail';
+import { generateStyledReport } from '@/shared/utils/excelReport';
 
 export default function ProjectHealth() {
   const { isLoading, error, isConfigured } = useClickUp();
@@ -33,6 +35,16 @@ export default function ProjectHealth() {
   };
 
   const isSingleProjectSelected = filters.project.length === 1;
+
+  const handleExport = () => {
+    const start = filters.startDate ? new Date(filters.startDate) : new Date();
+    const end = filters.endDate ? new Date(filters.endDate) : new Date();
+    const label = filters.startDate && filters.endDate 
+      ? `Project Workload (${new Date(filters.startDate).toLocaleDateString()} - ${new Date(filters.endDate).toLocaleDateString()})`
+      : 'Project Workload Report';
+    
+    generateStyledReport(tasks, 'monthly', label, start, end, true, 'project');
+  };
 
   if (isSingleProjectSelected) {
     return (
@@ -70,9 +82,18 @@ export default function ProjectHealth() {
 
   return (
     <div className="space-y-8 pb-12">
-      <div className="space-y-1">
-        <h1 className="text-h1 font-bold text-primary">Project Health</h1>
-        <p className="text-body text-secondary">Delivery status across active lists</p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="space-y-1">
+          <h1 className="text-h1 font-bold text-primary">Project Health</h1>
+          <p className="text-body text-secondary">Delivery status across active lists</p>
+        </div>
+        <button 
+          onClick={handleExport}
+          className="gap-2 px-4 py-2.5 bg-brand-navy border border-slate-700/30 rounded-xl text-caption font-bold text-primary hover:bg-slate-700/40 transition-colors shadow-lg shadow-brand-navy/10 flex items-center"
+        >
+          <FileSpreadsheet size={18} className="text-brand-pink" />
+          Export Report
+        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

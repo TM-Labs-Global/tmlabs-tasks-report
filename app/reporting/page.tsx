@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   CalendarDays, 
   CalendarRange, 
@@ -19,9 +19,11 @@ import { SetupScreen } from '@/shared/components/ui/SetupScreen';
 import { generateStyledReport } from '@/shared/utils/excelReport';
 import { useClickUp } from '@/shared/context/ClickUpContext';
 import { useFilteredTasks } from '@/shared/hooks/useFilteredTasks';
+import { useFilters } from '@/shared/context/FilterContext';
 import { MetricCard } from '@/shared/components/cards/MetricCard';
 import { TaskTable } from '@/shared/components/tables/TaskTable';
 import { ExportModal } from '@/shared/components/modals/ExportModal';
+import { MetricTasksModal } from '@/shared/components/modals/MetricTasksModal';
 
 type Tab = 'weekly' | 'monthly' | 'quarterly' | 'all';
 
@@ -29,9 +31,66 @@ export default function ReportingCenter() {
   const [activeTab, setActiveTab] = useState<Tab>('weekly');
   const [offset, setOffset] = useState(0); 
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [selectedMetric, setSelectedMetric] = useState<{ title: string; tasks: any[] } | null>(null);
   
   const { isLoading, error, isConfigured } = useClickUp();
   const tasks = useFilteredTasks();
+  const { filters, setFilters } = useFilters();
+
+  // Sync helper function to set global filters
+  const updatePeriodRange = (tab: Tab, currentOffset: number) => {
+    const now = new Date();
+    let startStr: string | null = null;
+    let endStr: string | null = null;
+    
+    if (tab === 'weekly') {
+      const d = new Date(now);
+      const day = d.getDay();
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+      const start = new Date(d.setDate(diff + (currentOffset * 7)));
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(start);
+      end.setDate(end.getDate() + 6);
+      end.setHours(23, 59, 59, 999);
+      startStr = start.toISOString();
+      endStr = end.toISOString();
+    } else if (tab === 'monthly') {
+      const start = new Date(now.getFullYear(), now.getMonth() + currentOffset, 1, 0, 0, 0, 0);
+      const end = new Date(now.getFullYear(), now.getMonth() + currentOffset + 1, 0, 23, 59, 59, 999);
+      startStr = start.toISOString();
+      endStr = end.toISOString();
+    } else if (tab === 'quarterly') {
+      const currentQuarter = Math.floor(now.getMonth() / 3);
+      const qStartMonth = (currentQuarter + currentOffset) * 3;
+      const start = new Date(now.getFullYear(), qStartMonth, 1, 0, 0, 0, 0);
+      const end = new Date(now.getFullYear(), qStartMonth + 3, 0, 23, 59, 59, 999);
+      startStr = start.toISOString();
+      endStr = end.toISOString();
+    }
+
+    setFilters(prev => ({
+      ...prev,
+      startDate: startStr,
+      endDate: endStr
+    }));
+  };
+
+  // Sync the date range on mount
+  useEffect(() => {
+    updatePeriodRange('weekly', 0);
+  }, []);
+
+  const handleTabChange = (newTab: Tab) => {
+    setActiveTab(newTab);
+    setOffset(0);
+    updatePeriodRange(newTab, 0);
+  };
+
+  const handleOffsetChange = (updater: number | ((prev: number) => number)) => {
+    const newOffset = typeof updater === 'function' ? updater(offset) : updater;
+    setOffset(newOffset);
+    updatePeriodRange(activeTab, newOffset);
+  };
 
   if (!isConfigured && !isLoading) return <SetupScreen />;
 
@@ -48,47 +107,34 @@ export default function ReportingCenter() {
     </div>
   );
 
-  // --- Date Range Calculations ---
-  const now = new Date();
-  let startDate = new Date(0); 
-  let endDate = new Date(8640000000000000); 
-  let periodLabel = 'All Workspace Data';
+  // Period label derivation
+  const startObj = filters.startDate ? new Date(filters.startDate) : null;
+  const endObj = filters.endDate ? new Date(filters.endDate) : null;
 
-  if (activeTab === 'weekly') {
-    const d = new Date(now);
-    const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1); 
-    startDate = new Date(d.setDate(diff + (offset * 7)));
-    startDate.setHours(0, 0, 0, 0);
-    endDate = new Date(startDate);
-    endDate.setDate(endDate.getDate() + 7);
-    periodLabel = `Week of ${startDate.toLocaleDateString()}`;
-  } else if (activeTab === 'monthly') {
-    startDate = new Date(now.getFullYear(), now.getMonth() + offset, 1);
-    endDate = new Date(now.getFullYear(), now.getMonth() + offset + 1, 0);
-    periodLabel = startDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-  } else if (activeTab === 'quarterly') {
-    const currentQuarter = Math.floor(now.getMonth() / 3);
-    const qStartMonth = (currentQuarter + offset) * 3;
-    startDate = new Date(now.getFullYear(), qStartMonth, 1);
-    endDate = new Date(now.getFullYear(), qStartMonth + 3, 0);
-    periodLabel = `Q${((currentQuarter + offset) % 4) + 1} ${startDate.getFullYear()}`;
+  let periodLabel = 'All Workspace Data';
+  if (activeTab === 'weekly' && startObj) {
+    periodLabel = `Week of ${startObj.toLocaleDateString()}`;
+  } else if (activeTab === 'monthly' && startObj) {
+    periodLabel = startObj.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  } else if (activeTab === 'quarterly' && startObj) {
+    const q = Math.floor(startObj.getMonth() / 3) + 1;
+    periodLabel = `Q${q} ${startObj.getFullYear()}`;
   }
 
-  const periodTasks = tasks.filter(t => {
-    if (activeTab === 'all') return true;
-    if (!t.dueDate && !t.due_date_raw) return false;
-    const taskDate = t.due_date_raw ? new Date(t.due_date_raw) : new Date(t.dueDate!);
-    return taskDate >= startDate && taskDate <= endDate;
-  });
+  // --- Metrics Calculation ---
+  const completedTasks = tasks.filter(t => t.status.toLowerCase().includes('complete') || t.status.toLowerCase().includes('done') || t.status.toLowerCase().includes('closed'));
+  const completed = completedTasks.length;
 
-  const completed = periodTasks.filter(t => t.status.toLowerCase().includes('complete') || t.status.toLowerCase().includes('done')).length;
-  const blocked = periodTasks.filter(t => t.flags.isBlocked).length;
-  const overdue = periodTasks.filter(t => t.flags.isOverdue).length;
-  const spillovers = periodTasks.filter(t => t.flags.isSpillover).length;
+  const blockedTasks = tasks.filter(t => t.flags.isBlocked);
+  const blocked = blockedTasks.length;
+
+  const overdueTasks = tasks.filter(t => t.flags.isOverdue);
+  const spilloversTasks = tasks.filter(t => t.flags.isSpillover);
+  const delayedTasks = tasks.filter(t => t.flags.isOverdue || t.flags.isSpillover);
+  const delayed = delayedTasks.length;
 
   const handleExport = (type: 'weekly' | 'monthly' | 'quarterly', showAssignee: boolean) => {
-    generateStyledReport(periodTasks, type, periodLabel, startDate, endDate, showAssignee);
+    generateStyledReport(tasks, type, periodLabel, startObj || new Date(0), endObj || new Date(), showAssignee);
     setIsExportModalOpen(false);
   };
 
@@ -103,7 +149,7 @@ export default function ReportingCenter() {
           {activeTab !== 'all' && (
             <div className="flex items-center bg-card border border-slate-700/20 rounded-xl overflow-hidden shadow-sm">
               <button 
-                onClick={() => setOffset(o => o - 1)}
+                onClick={() => handleOffsetChange(o => o - 1)}
                 className="p-2 hover:bg-elevated text-secondary hover:text-primary transition-colors"
               >
                 <ChevronLeft size={20} />
@@ -112,7 +158,7 @@ export default function ReportingCenter() {
                 {periodLabel}
               </div>
               <button 
-                onClick={() => setOffset(o => o + 1)}
+                onClick={() => handleOffsetChange(o => o + 1)}
                 className="p-2 hover:bg-elevated text-secondary hover:text-primary transition-colors"
               >
                 <ChevronRight size={20} />
@@ -140,7 +186,7 @@ export default function ReportingCenter() {
         ].map(tab => (
           <button 
             key={tab.id}
-            onClick={() => { setActiveTab(tab.id as Tab); setOffset(0); }}
+            onClick={() => handleTabChange(tab.id as Tab)}
             className={`pb-4 text-body font-medium transition-colors relative group whitespace-nowrap ${activeTab === tab.id ? 'text-brand-pink' : 'text-secondary hover:text-primary'}`}
           >
             <div className="flex items-center gap-2">
@@ -155,10 +201,10 @@ export default function ReportingCenter() {
       {/* Tab Content */}
       <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <MetricCard label="Total in Period" value={periodTasks.length} color="kpi-blue" icon={CalendarDays} />
-          <MetricCard label="Completed" value={completed} color="kpi-green" icon={CheckCircle2} />
-          <MetricCard label="Blockers" value={blocked} color="kpi-red" icon={Ban} />
-          <MetricCard label="Delayed/Spilled" value={overdue + spillovers} color="kpi-orange" icon={AlertCircle} />
+          <MetricCard label="Total in Period" value={tasks.length} color="kpi-blue" icon={CalendarDays} onClick={() => setSelectedMetric({ title: 'Total tasks in Period', tasks })} />
+          <MetricCard label="Completed" value={completed} color="kpi-green" icon={CheckCircle2} onClick={() => setSelectedMetric({ title: 'Completed Tasks', tasks: completedTasks })} />
+          <MetricCard label="Blockers" value={blocked} color="kpi-red" icon={Ban} onClick={() => setSelectedMetric({ title: 'Blocked Tasks', tasks: blockedTasks })} />
+          <MetricCard label="Delayed/Spilled" value={delayed} color="kpi-orange" icon={AlertCircle} onClick={() => setSelectedMetric({ title: 'Delayed / Spillover Tasks', tasks: delayedTasks })} />
         </div>
 
         <section className="space-y-4">
@@ -166,9 +212,9 @@ export default function ReportingCenter() {
             <h3 className="text-h3 font-semibold text-primary">
               {activeTab === 'all' ? 'Full Workspace Inventory' : `${periodLabel} - Dashboard View`}
             </h3>
-            <span className="text-caption text-secondary">{periodTasks.length} tasks matching current view</span>
+            <span className="text-caption text-secondary">{tasks.length} tasks matching current view</span>
           </div>
-          <TaskTable tasks={periodTasks} />
+          <TaskTable tasks={tasks} />
         </section>
       </div>
 
@@ -178,6 +224,16 @@ export default function ReportingCenter() {
         onExport={handleExport}
         currentPeriod={periodLabel}
       />
+
+      {/* Metric Tasks List Modal */}
+      {selectedMetric && (
+        <MetricTasksModal
+          isOpen={!!selectedMetric}
+          onClose={() => setSelectedMetric(null)}
+          title={selectedMetric.title}
+          tasks={selectedMetric.tasks}
+        />
+      )}
     </div>
   );
 }

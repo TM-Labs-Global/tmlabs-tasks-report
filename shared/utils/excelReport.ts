@@ -15,7 +15,187 @@ interface Task {
   assignee?: { name: string };
   flags: {
     isSpillover: boolean;
+    isBlocked?: boolean;
+    isOverdue?: boolean;
   };
+}
+
+// Dynamic Canvas-based Clustered Bar Chart Renderer
+function drawClusteredBarChart(
+  tasks: Task[], 
+  periodName: string, 
+  groupBy: 'assignee' | 'project'
+): string {
+  // 1. Group tasks and aggregate metrics
+  const groupsMap: { [key: string]: { open: number; completed: number; blocked: number; spillover: number } } = {};
+  
+  tasks.forEach(task => {
+    const key = groupBy === 'assignee' 
+      ? (task.assignee?.name || 'Unassigned') 
+      : task.project;
+      
+    if (!groupsMap[key]) {
+      groupsMap[key] = { open: 0, completed: 0, blocked: 0, spillover: 0 };
+    }
+    
+    const isDone = task.status.toLowerCase().includes('complete') || task.status.toLowerCase().includes('done') || task.status.toLowerCase().includes('closed');
+    if (isDone) {
+      groupsMap[key].completed++;
+    } else {
+      groupsMap[key].open++;
+    }
+    
+    if (task.flags?.isBlocked) {
+      groupsMap[key].blocked++;
+    }
+    if (task.flags?.isSpillover) {
+      groupsMap[key].spillover++;
+    }
+  });
+
+  const groups = Object.entries(groupsMap)
+    .map(([name, counts]) => ({ name, ...counts }))
+    .sort((a, b) => (b.open + b.completed) - (a.open + a.completed))
+    .slice(0, 10); // Limit to top 10 for best visual layout
+
+  if (groups.length === 0) {
+    // Return empty image if no groups exist
+    const emptyCanvas = document.createElement('canvas');
+    emptyCanvas.width = 100;
+    emptyCanvas.height = 100;
+    return emptyCanvas.toDataURL('image/png');
+  }
+
+  // 2. Set dimensions with extra horizontal room for groups
+  const width = Math.max(900, groups.length * 100 + 150);
+  const height = 500;
+  
+  const canvas = document.createElement('canvas');
+  // Scale for high resolution Retina displays (2x)
+  canvas.width = width * 2;
+  canvas.height = height * 2;
+  canvas.style.width = `${width}px`;
+  canvas.style.height = `${height}px`;
+
+  const ctx = canvas.getContext('2d')!;
+  ctx.scale(2, 2);
+
+  // 3. Paint dark slate theme background
+  ctx.fillStyle = '#1E293B'; // Slate-800
+  ctx.fillRect(0, 0, width, height);
+
+  // 4. Draw Header Title
+  ctx.fillStyle = '#F8FAFC'; // Slate-50
+  ctx.font = 'bold 18px Inter, system-ui, -apple-system, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(
+    groupBy === 'assignee' 
+      ? `Task Workload by Assignee — ${periodName}`
+      : `Project Delivery & Health Summary — ${periodName}`,
+    40, 
+    42
+  );
+
+  // 5. Draw Legend Group
+  const legendX = width - 420;
+  const legendY = 28;
+  const legendItems = [
+    { label: 'Active / Open', color: '#3B82F6' },
+    { label: 'Completed', color: '#22C55E' },
+    { label: 'Blocked', color: '#EF4444' },
+    { label: 'Spillover', color: '#F97316' }
+  ];
+  legendItems.forEach((item, index) => {
+    ctx.fillStyle = item.color;
+    ctx.fillRect(legendX + index * 100, legendY, 15, 15);
+    ctx.fillStyle = '#94A3B8'; // Slate-400
+    ctx.font = '12px Inter, sans-serif';
+    ctx.fillText(item.label, legendX + index * 100 + 20, legendY + 12);
+  });
+
+  // 6. Chart boundaries
+  const chartLeft = 60;
+  const chartRight = width - 40;
+  const chartTop = 80;
+  const chartBottom = height - 120;
+  const chartWidth = chartRight - chartLeft;
+  const chartHeight = chartBottom - chartTop;
+
+  // 7. Calculate max Y tick value
+  let maxVal = 0;
+  groups.forEach(g => {
+    maxVal = Math.max(maxVal, g.open, g.completed, g.blocked, g.spillover);
+  });
+  maxVal = Math.max(5, Math.ceil(maxVal * 1.25)); // 25% padding on top
+
+  // 8. Draw Y Gridlines & Y Labels
+  const yTicks = 5;
+  ctx.strokeStyle = '#334155'; // Slate-700
+  ctx.lineWidth = 1;
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#94A3B8';
+  ctx.font = '11px Inter, sans-serif';
+
+  for (let i = 0; i <= yTicks; i++) {
+    const y = chartBottom - (i / yTicks) * chartHeight;
+    const val = Math.round((i / yTicks) * maxVal);
+
+    // Faint gridline
+    ctx.beginPath();
+    ctx.moveTo(chartLeft, y);
+    ctx.lineTo(chartRight, y);
+    ctx.stroke();
+
+    // Tick Label
+    ctx.fillText(String(val), chartLeft - 10, y + 4);
+  }
+
+  // 9. Draw Groups & Clustered vertical bars
+  const groupCount = groups.length;
+  const groupWidth = chartWidth / groupCount;
+  const innerPadding = 12; // margins inside group
+  const barWidth = (groupWidth - innerPadding * 2) / 4; // 4 metrics
+
+  groups.forEach((g, gIdx) => {
+    const groupX = chartLeft + gIdx * groupWidth + innerPadding;
+
+    const metrics = [
+      { val: g.open, color: '#3B82F6' },
+      { val: g.completed, color: '#22C55E' },
+      { val: g.blocked, color: '#EF4444' },
+      { val: g.spillover, color: '#F97316' }
+    ];
+
+    metrics.forEach((m, mIdx) => {
+      const barH = (m.val / maxVal) * chartHeight;
+      const barX = groupX + mIdx * barWidth;
+      const barY = chartBottom - barH;
+
+      if (m.val > 0) {
+        // Draw the vertical bar
+        ctx.fillStyle = m.color;
+        ctx.fillRect(barX, barY, barWidth - 2, barH);
+
+        // Draw dynamic numeric label above bar
+        ctx.fillStyle = '#F8FAFC';
+        ctx.font = 'bold 10px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(String(m.val), barX + (barWidth - 2) / 2, barY - 4);
+      }
+    });
+
+    // 10. Draw X Axis Group labels rotated by -35deg to guarantee no overlap
+    ctx.save();
+    ctx.translate(groupX + (groupWidth - innerPadding * 2) / 2, chartBottom + 16);
+    ctx.rotate(-35 * Math.PI / 180);
+    ctx.fillStyle = '#F8FAFC';
+    ctx.font = 'bold 11px Inter, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(g.name, 0, 0);
+    ctx.restore();
+  });
+
+  return canvas.toDataURL('image/png');
 }
 
 export async function generateStyledReport(
@@ -24,13 +204,22 @@ export async function generateStyledReport(
   periodName: string, 
   periodStartDate: Date,
   periodEndDate: Date,
-  showAssignee: boolean = true
+  showAssignee: boolean = true,
+  groupBy: 'assignee' | 'project' = 'assignee'
 ) {
   const workbook = new ExcelJS.Workbook();
   
   const intervals = type === 'weekly' 
     ? eachWeekOfInterval({ start: periodStartDate, end: periodEndDate })
     : [periodStartDate];
+
+  // Pre-generate dynamic canvas chart to embed below worksheet
+  let chartBase64: string | null = null;
+  try {
+    chartBase64 = drawClusteredBarChart(tasks, periodName, groupBy);
+  } catch (err) {
+    console.error('Failed to pre-render dynamic Excel chart:', err);
+  }
 
   intervals.forEach((intervalStart, index) => {
     const sheetName = type === 'weekly' ? `Week ${index + 1}` : periodName.substring(0, 30);
@@ -90,12 +279,11 @@ export async function generateStyledReport(
     for (let i = 0; i < rowCount; i++) {
       const task = weekTasks[i];
       const row = worksheet.getRow(i + 4);
-      // REMOVED fixed height to allow wrapText to work properly
       
       const cells: any[] = [i + 1, task?.name || '', task?.project || '', task?.priority || ''];
       if (showAssignee) cells.push(task?.assignee?.name || '');
       for (let d = 0; d < 5; d++) cells.push(''); 
-      cells.push(task?.status || '', task?.flags.isSpillover ? 'Yes' : 'No', task?.text_content?.substring(0, 50) || '');
+      cells.push(task?.status || '', task?.flags?.isSpillover ? 'Yes' : 'No', task?.text_content?.substring(0, 50) || '');
 
       cells.forEach((val, colIdx) => {
         const cell = row.getCell(colIdx + 1);
@@ -146,9 +334,9 @@ export async function generateStyledReport(
     summaryHeader.font = { color: { argb: 'FFFFFFFF' }, bold: true };
     summaryHeader.alignment = { horizontal: 'center', vertical: 'middle' };
 
-    const doneCount = weekTasks.filter(t => t.status.toLowerCase().includes('complete') || t.status.toLowerCase().includes('done')).length;
+    const doneCount = weekTasks.filter(t => t.status.toLowerCase().includes('complete') || t.status.toLowerCase().includes('done') || t.status.toLowerCase().includes('closed')).length;
     const inProgCount = weekTasks.filter(t => t.status.toLowerCase().includes('progress')).length;
-    const spilledCount = weekTasks.filter(t => t.flags.isSpillover).length;
+    const spilledCount = weekTasks.filter(t => t.flags?.isSpillover).length;
     const pendingCount = Math.max(0, weekTasks.length - doneCount - inProgCount);
 
     const stats = [
@@ -166,6 +354,31 @@ export async function generateStyledReport(
       cell.alignment = { horizontal: 'center', vertical: 'middle' };
       cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
     });
+
+    // 6. DYNAMIC CANVAS CHART EMBEDDING (Requirement 5)
+    if (chartBase64) {
+      try {
+        const imageId = workbook.addImage({
+          base64: chartBase64,
+          extension: 'png',
+        });
+        
+        // Place chart 2 rows below the summary footer
+        const chartStartRow = footerStart + 2;
+        
+        // Calculate dynamic width matching drawClusteredBarChart logic
+        const uniqueKeys = new Set(tasks.map(t => groupBy === 'assignee' ? (t.assignee?.name || 'Unassigned') : t.project));
+        const groupCount = Math.min(10, uniqueKeys.size);
+        const chartWidth = Math.max(900, groupCount * 100 + 150);
+        
+        worksheet.addImage(imageId, {
+          tl: { col: 1, row: chartStartRow },
+          ext: { width: chartWidth, height: 500 }
+        });
+      } catch (embedErr) {
+        console.error('Failed to embed dynamic chart image in spreadsheet:', embedErr);
+      }
+    }
 
     // Final Column Sizing
     worksheet.getColumn(1).width = 6;     // #

@@ -19,6 +19,20 @@ interface FilterContextType {
   isFiltered: boolean;
 }
 
+export const getDefaultDateRange = () => {
+  const now = new Date();
+  const day = now.getDay();
+  // Monday is day 1. If day is 0 (Sunday), we subtract 6 days. Otherwise we subtract (day - 1) days.
+  const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+  const monday = new Date(now.getFullYear(), now.getMonth(), diff, 0, 0, 0, 0);
+  const today = new Date();
+  today.setHours(23, 59, 59, 999);
+  return {
+    start: monday.toISOString(),
+    end: today.toISOString(),
+  };
+};
+
 const initialFilters: Filters = {
   status: [],
   priority: [],

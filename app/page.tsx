@@ -22,10 +22,14 @@ import {
   Loader2 
 } from 'lucide-react';
 import { SetupScreen } from '@/shared/components/ui/SetupScreen';
+import { MetricTasksModal } from '@/shared/components/modals/MetricTasksModal';
 
 export default function Home() {
   const { members, isLoading, error, isConfigured } = useClickUp();
   const tasks = useFilteredTasks();
+
+  // --- Selected Metric Modal State ---
+  const [selectedMetric, setSelectedMetric] = React.useState<{ title: string; tasks: any[] } | null>(null);
 
   if (isLoading) {
     return (
@@ -56,34 +60,46 @@ export default function Home() {
   const monthAgo = new Date(now.getFullYear(), now.getMonth(), 1);
 
   const totalTasks = tasks.length;
-  const inProgress = tasks.filter(t => t.status.toLowerCase().includes('progress')).length;
-  const blocked = tasks.filter(t => t.flags.isBlocked).length;
-  const overdue = tasks.filter(t => t.flags.isOverdue).length;
-  const spillovers = tasks.filter(t => t.flags.isSpillover).length;
   
-  const completedThisWeek = tasks.filter(t => {
+  const inProgressTasks = tasks.filter(t => t.status.toLowerCase().includes('progress'));
+  const inProgress = inProgressTasks.length;
+  
+  const blockedTasks = tasks.filter(t => t.flags.isBlocked);
+  const blocked = blockedTasks.length;
+  
+  const overdueTasks = tasks.filter(t => t.flags.isOverdue);
+  const overdue = overdueTasks.length;
+  
+  const spilloversTasks = tasks.filter(t => t.flags.isSpillover);
+  const spillovers = spilloversTasks.length;
+  
+  const completedThisWeekTasks = tasks.filter(t => {
     const isDone = t.status.toLowerCase().includes('complete') || t.status.toLowerCase().includes('done') || t.status.toLowerCase().includes('closed');
     if (!isDone || !t.date_closed) return false;
     const closedDate = new Date(parseInt(t.date_closed));
     return closedDate >= weekAgo;
-  }).length;
+  });
+  const completedThisWeek = completedThisWeekTasks.length;
 
-  const completedThisMonth = tasks.filter(t => {
+  const completedThisMonthTasks = tasks.filter(t => {
     const isDone = t.status.toLowerCase().includes('complete') || t.status.toLowerCase().includes('done') || t.status.toLowerCase().includes('closed');
     if (!isDone || !t.date_closed) return false;
     const closedDate = new Date(parseInt(t.date_closed));
     return closedDate >= monthAgo;
-  }).length;
+  });
+  const completedThisMonth = completedThisMonthTasks.length;
 
-  const highPriorityPending = tasks.filter(t => {
+  const highPriorityTasks = tasks.filter(t => {
     const isDone = t.status.toLowerCase().includes('complete') || t.status.toLowerCase().includes('done') || t.status.toLowerCase().includes('closed');
     return !isDone && (t.priority === 1 || t.priority === 2);
-  }).length;
+  });
+  const highPriorityPending = highPriorityTasks.length;
 
-  const activeProjectsCount = new Set(tasks.filter(t => {
+  const activeProjectsTasks = tasks.filter(t => {
     const isDone = t.status.toLowerCase().includes('complete') || t.status.toLowerCase().includes('done') || t.status.toLowerCase().includes('closed');
     return !isDone;
-  }).map(t => t.project)).size;
+  });
+  const activeProjectsCount = new Set(activeProjectsTasks.map(t => t.project)).size;
 
   // --- Chart Data Preparation ---
   
@@ -150,18 +166,18 @@ export default function Home() {
     <div className="space-y-8 pb-12">
       {/* KPI Grid - Row 1 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard label="Total Tasks" value={totalTasks} color="kpi-blue" icon={FileText} />
-        <MetricCard label="Completed (Week)" value={completedThisWeek} color="kpi-green" icon={CheckCircle2} />
-        <MetricCard label="Completed (Month)" value={completedThisMonth} color="kpi-teal" icon={Zap} />
-        <MetricCard label="In Progress" value={inProgress} color="kpi-amber" icon={Clock} />
+        <MetricCard label="Total Tasks" value={totalTasks} color="kpi-blue" icon={FileText} onClick={() => setSelectedMetric({ title: 'Total Tasks', tasks })} />
+        <MetricCard label="Completed (Week)" value={completedThisWeek} color="kpi-green" icon={CheckCircle2} onClick={() => setSelectedMetric({ title: 'Completed This Week', tasks: completedThisWeekTasks })} />
+        <MetricCard label="Completed (Month)" value={completedThisMonth} color="kpi-teal" icon={Zap} onClick={() => setSelectedMetric({ title: 'Completed This Month', tasks: completedThisMonthTasks })} />
+        <MetricCard label="In Progress" value={inProgress} color="kpi-amber" icon={Clock} onClick={() => setSelectedMetric({ title: 'In Progress Tasks', tasks: inProgressTasks })} />
       </div>
 
       {/* KPI Grid - Row 2 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard label="Blocked" value={blocked} color="kpi-red" icon={Ban} />
-        <MetricCard label="Spillovers" value={spillovers} color="kpi-orange" icon={AlertCircle} />
-        <MetricCard label="High Priority" value={highPriorityPending} color="kpi-purple" icon={TrendingUp} />
-        <MetricCard label="Active Projects" value={activeProjectsCount} color="kpi-indigo" icon={Users} />
+        <MetricCard label="Blocked" value={blocked} color="kpi-red" icon={Ban} onClick={() => setSelectedMetric({ title: 'Blocked Tasks', tasks: blockedTasks })} />
+        <MetricCard label="Spillovers" value={spillovers} color="kpi-orange" icon={AlertCircle} onClick={() => setSelectedMetric({ title: 'Spillover Tasks', tasks: spilloversTasks })} />
+        <MetricCard label="High Priority" value={highPriorityPending} color="kpi-purple" icon={TrendingUp} onClick={() => setSelectedMetric({ title: 'High Priority Tasks', tasks: highPriorityTasks })} />
+        <MetricCard label="Active Projects" value={activeProjectsCount} color="kpi-indigo" icon={Users} onClick={() => setSelectedMetric({ title: 'Active Projects (Pending Tasks)', tasks: activeProjectsTasks })} />
       </div>
 
       {/* ClickUp Workflow Breakdown */}
@@ -171,22 +187,34 @@ export default function Home() {
           Workflow Status Breakdown
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-card p-5 rounded-xl border border-slate-700/20 shadow-sm relative overflow-hidden group">
+          <div 
+            onClick={() => setSelectedMetric({ title: 'Backlog / Open Tasks', tasks: tasks.filter(t => t.status.toLowerCase().includes('backlog') || t.status.toLowerCase().includes('todo') || t.status.toLowerCase().includes('open')) })} 
+            className="bg-card p-5 rounded-xl border border-slate-700/20 shadow-sm relative overflow-hidden group cursor-pointer hover:bg-elevated hover:border-slate-700/40 transition-all duration-150"
+          >
             <div className="absolute top-0 left-0 w-1 h-full bg-slate-500" />
             <div className="text-caption font-bold text-muted uppercase tracking-wider mb-1">Backlog</div>
             <div className="text-h2 font-bold text-primary">{tasks.filter(t => t.status.toLowerCase().includes('backlog') || t.status.toLowerCase().includes('todo') || t.status.toLowerCase().includes('open')).length}</div>
           </div>
-          <div className="bg-card p-5 rounded-xl border border-slate-700/20 shadow-sm relative overflow-hidden group">
+          <div 
+            onClick={() => setSelectedMetric({ title: 'In Progress Tasks', tasks: tasks.filter(t => t.status.toLowerCase().includes('progress') || t.status.toLowerCase().includes('active')) })} 
+            className="bg-card p-5 rounded-xl border border-slate-700/20 shadow-sm relative overflow-hidden group cursor-pointer hover:bg-elevated hover:border-slate-700/40 transition-all duration-150"
+          >
             <div className="absolute top-0 left-0 w-1 h-full bg-status-in-progress" />
             <div className="text-caption font-bold text-status-in-progress uppercase tracking-wider mb-1">In Progress</div>
             <div className="text-h2 font-bold text-primary">{tasks.filter(t => t.status.toLowerCase().includes('progress') || t.status.toLowerCase().includes('active')).length}</div>
           </div>
-          <div className="bg-card p-5 rounded-xl border border-slate-700/20 shadow-sm relative overflow-hidden group">
+          <div 
+            onClick={() => setSelectedMetric({ title: 'In Review Tasks', tasks: tasks.filter(t => t.status.toLowerCase().includes('review')) })} 
+            className="bg-card p-5 rounded-xl border border-slate-700/20 shadow-sm relative overflow-hidden group cursor-pointer hover:bg-elevated hover:border-slate-700/40 transition-all duration-150"
+          >
             <div className="absolute top-0 left-0 w-1 h-full bg-status-review" />
             <div className="text-caption font-bold text-status-review uppercase tracking-wider mb-1">In Review</div>
             <div className="text-h2 font-bold text-primary">{tasks.filter(t => t.status.toLowerCase().includes('review')).length}</div>
           </div>
-          <div className="bg-card p-5 rounded-xl border border-slate-700/20 shadow-sm relative overflow-hidden group">
+          <div 
+            onClick={() => setSelectedMetric({ title: 'Completed Tasks', tasks: tasks.filter(t => t.status.toLowerCase().includes('complete') || t.status.toLowerCase().includes('done') || t.status.toLowerCase().includes('closed')) })} 
+            className="bg-card p-5 rounded-xl border border-slate-700/20 shadow-sm relative overflow-hidden group cursor-pointer hover:bg-elevated hover:border-slate-700/40 transition-all duration-150"
+          >
             <div className="absolute top-0 left-0 w-1 h-full bg-status-complete" />
             <div className="text-caption font-bold text-status-complete uppercase tracking-wider mb-1">Completed</div>
             <div className="text-h2 font-bold text-primary">{tasks.filter(t => t.status.toLowerCase().includes('complete') || t.status.toLowerCase().includes('done') || t.status.toLowerCase().includes('closed')).length}</div>
@@ -253,6 +281,16 @@ export default function Home() {
         </div>
         <TaskTable tasks={tasks} />
       </section>
+
+      {/* Metric Tasks List Modal */}
+      {selectedMetric && (
+        <MetricTasksModal
+          isOpen={!!selectedMetric}
+          onClose={() => setSelectedMetric(null)}
+          title={selectedMetric.title}
+          tasks={selectedMetric.tasks}
+        />
+      )}
     </div>
   );
 }

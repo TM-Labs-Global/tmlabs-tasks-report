@@ -8,9 +8,10 @@ interface ModalProps {
   onClose: () => void;
   title?: string;
   children: React.ReactNode;
+  maxWidthClass?: string;
 }
 
-export function Modal({ isOpen, onClose, title, children }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children, maxWidthClass }: ModalProps) {
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -36,7 +37,7 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
       />
       
       {/* Modal Content */}
-      <div className="relative w-full max-w-2xl bg-card border border-slate-700/30 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-4 duration-200">
+      <div className={`relative w-full ${maxWidthClass || 'max-w-2xl'} bg-card border border-slate-700/30 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-4 duration-200`}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700/20">
           <h3 className="text-h3 font-semibold text-primary">{title || 'Details'}</h3>
           <button 
