@@ -21,7 +21,6 @@ const navItems = [
   { name: 'Reporting Center', href: '/reporting', icon: ClipboardList },
   { name: 'Team Performance', href: '/team', icon: Users },
   { name: 'Project Health', href: '/projects', icon: FolderKanban },
-  { name: 'Audit Logs', href: '/logs', icon: History },
 ];
 
 export function Sidebar({ isOpen, onClose }: { isOpen?: boolean, onClose?: () => void }) {

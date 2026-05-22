@@ -25,7 +25,6 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
     if (pathname === '/reporting') return 'Reporting Center';
     if (pathname === '/team') return 'Team Performance';
     if (pathname === '/projects') return 'Project Health';
-    if (pathname === '/logs') return 'Audit Logs';
     return 'TM Labs Dashboard';
   };
 
