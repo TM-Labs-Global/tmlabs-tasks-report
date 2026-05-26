@@ -135,7 +135,8 @@ export function FilterBar() {
           <CalendarPicker 
             currentStart={filters.startDate}
             currentEnd={filters.endDate}
-            onRangeSelect={(start, end) => setFilters(prev => ({ ...prev, startDate: start, endDate: end }))}
+            currentPreset={filters.preset}
+            onRangeSelect={(start, end, preset) => setFilters(prev => ({ ...prev, startDate: start, endDate: end, preset: preset || 'Custom Range' }))}
           />
         </div>
 
@@ -200,8 +201,8 @@ export function FilterBar() {
       <div className="flex flex-wrap gap-2 lg:ml-auto mt-2 lg:mt-auto mb-0.5 max-h-20 overflow-y-auto shrink-0">
         {filters.startDate && filters.endDate && (
           <Chip 
-            label={`${getFormatDateStr(filters.startDate)} – ${getFormatDateStr(filters.endDate)}`} 
-            onRemove={() => setFilters(prev => ({ ...prev, startDate: null, endDate: null }))} 
+            label={`${filters.preset || 'Custom'}: ${getFormatDateStr(filters.startDate)} – ${getFormatDateStr(filters.endDate)}`} 
+            onRemove={() => setFilters(prev => ({ ...prev, startDate: null, endDate: null, preset: 'All Time' }))} 
           />
         )}
         {filters.search && (

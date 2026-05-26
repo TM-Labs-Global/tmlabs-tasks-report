@@ -37,26 +37,19 @@ export function useFilteredTasks() {
       const startStr = filters.startDate;
       const endStr = filters.endDate;
       
-      let start: number;
-      let end: number;
-      
       if (startStr && endStr) {
-        start = new Date(startStr).getTime();
-        end = new Date(endStr).getTime();
-      } else {
-        const defaultRange = getDefaultDateRange();
-        start = new Date(defaultRange.start).getTime();
-        end = new Date(defaultRange.end).getTime();
-      }
-      
-      const taskDueDate = task.dueDate ? new Date(task.dueDate).getTime() : (task.due_date_raw ? new Date(task.due_date_raw).getTime() : null);
-      const taskClosedDate = task.date_closed ? parseInt(task.date_closed) : null;
-      
-      const dueInRange = taskDueDate && taskDueDate >= start && taskDueDate <= end;
-      const closedInRange = taskClosedDate && taskClosedDate >= start && taskClosedDate <= end;
-      
-      if (!dueInRange && !closedInRange) {
-        return false;
+        const start = new Date(startStr).getTime();
+        const end = new Date(endStr).getTime();
+        
+        const taskDueDate = task.dueDate ? new Date(task.dueDate).getTime() : (task.due_date_raw ? new Date(task.due_date_raw).getTime() : null);
+        const taskClosedDate = task.date_closed ? parseInt(task.date_closed) : null;
+        
+        const dueInRange = taskDueDate && taskDueDate >= start && taskDueDate <= end;
+        const closedInRange = taskClosedDate && taskClosedDate >= start && taskClosedDate <= end;
+        
+        if (!dueInRange && !closedInRange) {
+          return false;
+        }
       }
 
       // Search Filter

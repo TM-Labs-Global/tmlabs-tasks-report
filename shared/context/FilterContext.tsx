@@ -10,6 +10,7 @@ interface Filters {
   search: string;
   startDate: string | null;
   endDate: string | null;
+  preset?: string;
 }
 
 interface FilterContextType {
@@ -41,6 +42,7 @@ const initialFilters: Filters = {
   search: '',
   startDate: null,
   endDate: null,
+  preset: 'All Time',
 };
 
 const FilterContext = createContext<FilterContextType | undefined>(undefined);
