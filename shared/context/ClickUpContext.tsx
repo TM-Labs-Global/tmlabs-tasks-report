@@ -12,6 +12,7 @@ interface ClickUpContextType {
   tasks: any[];
   members: any[];
   teams: any[];
+  spaces: any[];
   selectedTeamId: string | null;
   setSelectedTeamId: (id: string) => void;
   refreshData: () => Promise<void>;
@@ -27,6 +28,7 @@ export function ClickUpProvider({ children }: { children: React.ReactNode }) {
   const [tasks, setTasks] = useState<any[]>([]);
   const [members, setMembers] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
+  const [spaces, setSpaces] = useState<any[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
 
   // Initialize token from localStorage
@@ -80,9 +82,25 @@ export function ClickUpProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     setError(null);
     try {
+      // 1. Fetch all raw tasks across the team
       const rawTasks = await ClickUpAPI.getAllTasks(teamId, tokenToUse || '');
-      setTasks(normalizeTasks(rawTasks));
+      
+      // 2. Deduplicate tasks by task.id before calculations
+      const uniqueTasksMap = new Map();
+      rawTasks.forEach(task => {
+        if (task && task.id) {
+          uniqueTasksMap.set(task.id, task);
+        }
+      });
+      const uniqueTasks = Array.from(uniqueTasksMap.values());
+      
+      setTasks(normalizeTasks(uniqueTasks));
       setMembers(teamMembers || []);
+
+      // 3. Fetch spaces and their lists (both Folder Lists and folderless lists)
+      const detailedSpaces = await ClickUpAPI.getWorkspaceHierarchy(teamId, tokenToUse || '');
+      setSpaces(detailedSpaces);
+
       setIsConfigured(true);
     } catch (err: any) {
       console.error('Fetch Data Error:', err);
@@ -152,6 +170,7 @@ export function ClickUpProvider({ children }: { children: React.ReactNode }) {
       tasks, 
       members, 
       teams, 
+      spaces,
       selectedTeamId, 
       setSelectedTeamId,
       refreshData
