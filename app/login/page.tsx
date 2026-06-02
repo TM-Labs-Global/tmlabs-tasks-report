@@ -46,8 +46,18 @@ export default function LoginPage() {
   };
 
   const handleSendOtp = async (emailToUse = email) => {
-    if (!isValidEmail(emailToUse)) {
-      setError('Only @takeoutmedia.xyz and @tmlabs.xyz email addresses are allowed.');
+    const trimmedEmail = emailToUse.trim();
+    if (!trimmedEmail) {
+      setError('Email address is required.');
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+    if (!isValidEmail(trimmedEmail)) {
+      setError('Access is restricted to authorized company email addresses.');
       return;
     }
     setIsLoading(true);
@@ -57,7 +67,7 @@ export default function LoginPage() {
       const res = await fetch('/api/auth/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: emailToUse.toLowerCase().trim() }),
+        body: JSON.stringify({ email: trimmedEmail.toLowerCase() }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'Failed to send OTP.'); return; }
@@ -186,13 +196,12 @@ export default function LoginPage() {
                       value={email}
                       onChange={e => { setEmail(e.target.value); setError(''); }}
                       onKeyDown={e => e.key === 'Enter' && handleSendOtp()}
-                      placeholder="you@tmlabs.xyz"
+                      placeholder=""
                       className="w-full pl-9 pr-4 py-3 bg-elevated border border-slate-700/40 rounded-xl text-primary placeholder:text-muted text-sm focus:outline-none focus:ring-2 focus:ring-brand-pink/50 focus:border-brand-pink/50 transition-all"
                       autoFocus
                       autoComplete="email"
                     />
                   </div>
-                  <p className="text-xs text-muted mt-2">Restricted to @takeoutmedia.xyz and @tmlabs.xyz</p>
                 </div>
 
                 {error && (

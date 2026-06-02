@@ -133,22 +133,22 @@ export function TaskTable({ tasks, onRowClick }: TaskTableProps) {
 
         {/* Pagination Controls */}
         {totalPages > 1 && (
-          <div className="px-6 py-3 border-t border-slate-700/20 flex items-center justify-between bg-secondary/30">
-            <div className="text-caption text-secondary">
+          <div className="px-6 py-3 border-t border-slate-700/20 flex flex-col sm:flex-row items-center justify-between bg-secondary/30 gap-3">
+            <div className="text-caption text-secondary text-center sm:text-left">
               Showing <span className="text-primary font-medium">{((currentPage - 1) * pageSize) + 1}</span> to <span className="text-primary font-medium">{Math.min(currentPage * pageSize, tasks.length)}</span> of <span className="text-primary font-medium">{tasks.length}</span> tasks
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 w-full sm:w-auto justify-center">
               <button 
                 onClick={(e) => { e.stopPropagation(); setCurrentPage(p => Math.max(1, p - 1)); }}
                 disabled={currentPage === 1}
-                className="px-3 py-1 rounded bg-elevated border border-slate-700/30 text-caption text-primary disabled:opacity-50 hover:bg-slate-700/40 transition-colors"
+                className="px-4 py-2 sm:px-3 sm:py-1 rounded bg-elevated border border-slate-700/30 text-caption text-primary disabled:opacity-50 hover:bg-slate-700/40 transition-colors flex-1 sm:flex-none text-center"
               >
                 Previous
               </button>
               <button 
                 onClick={(e) => { e.stopPropagation(); setCurrentPage(p => Math.min(totalPages, p + 1)); }}
                 disabled={currentPage === totalPages}
-                className="px-3 py-1 rounded bg-elevated border border-slate-700/30 text-caption text-primary disabled:opacity-50 hover:bg-slate-700/40 transition-colors"
+                className="px-4 py-2 sm:px-3 sm:py-1 rounded bg-elevated border border-slate-700/30 text-caption text-primary disabled:opacity-50 hover:bg-slate-700/40 transition-colors flex-1 sm:flex-none text-center"
               >
                 Next
               </button>

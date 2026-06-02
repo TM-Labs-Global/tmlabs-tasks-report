@@ -89,7 +89,7 @@ export default function ProjectHealth() {
         </div>
         <button 
           onClick={handleExport}
-          className="gap-2 px-4 py-2.5 bg-brand-navy border border-slate-700/30 rounded-xl text-caption font-bold text-primary hover:bg-slate-700/40 transition-colors shadow-lg shadow-brand-navy/10 flex items-center"
+          className="gap-2 px-4 py-2.5 bg-brand-navy border border-slate-700/30 rounded-xl text-caption font-bold text-primary hover:bg-slate-700/40 transition-colors shadow-lg shadow-brand-navy/10 flex items-center w-full sm:w-auto justify-center"
         >
           <FileSpreadsheet size={18} className="text-brand-pink" />
           Export Report

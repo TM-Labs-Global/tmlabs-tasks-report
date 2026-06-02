@@ -20,7 +20,7 @@ export async function POST(request: Request) {
 
     if (!validateEmail(email)) {
       return NextResponse.json({
-        error: 'Registration/Login is restricted to takeoutmedia.xyz and tmlabs.xyz domains only.'
+        error: 'Access is restricted to authorized company email addresses.'
       }, { status: 403 });
     }
 

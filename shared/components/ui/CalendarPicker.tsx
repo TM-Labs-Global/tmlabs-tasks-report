@@ -300,7 +300,7 @@ export function CalendarPicker({ onRangeSelect, currentStart, currentEnd, curren
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 mt-2 bg-card border border-slate-700/30 rounded-2xl p-6 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-200 flex flex-col md:flex-row gap-6 min-w-[320px] md:min-w-[580px]">
+        <div className="absolute top-full right-0 md:right-0 xl:right-auto xl:left-0 mt-2 bg-card border border-slate-700/30 rounded-2xl p-6 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-200 flex flex-col md:flex-row gap-6 min-w-[320px] md:min-w-[580px]">
           {/* Presets Sidebar - Scrollable for the extended presets */}
           <div className="flex flex-col gap-1 border-b md:border-b-0 md:border-r border-slate-700/20 pb-4 md:pb-0 md:pr-6 shrink-0 w-full md:w-44 max-h-[350px] overflow-y-auto no-scrollbar">
             <span className="text-[10px] font-bold text-muted uppercase tracking-widest mb-2 hidden md:block">Presets</span>

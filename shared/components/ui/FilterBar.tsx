@@ -10,6 +10,7 @@ import { CalendarPicker } from './CalendarPicker';
 export function FilterBar() {
   const { filters, setFilters, resetFilters, isFiltered } = useFilters();
   const { tasks, members } = useClickUp();
+  const [isExpanded, setIsExpanded] = React.useState(false);
 
   // Cascading Filter logic: calculate available options based on other categories
   const getFilteredTasksExcept = (excludeKey?: 'project' | 'status' | 'member' | 'search' | 'date') => {
@@ -74,6 +75,17 @@ export function FilterBar() {
   );
   const availableMembers = members.filter(m => activeMemberIds.has(String(m.user.id)));
 
+  // Calculate active filter count
+  const activeCount = React.useMemo(() => {
+    let count = 0;
+    if (filters.startDate && filters.endDate) count++;
+    if (filters.search) count++;
+    count += filters.project.length;
+    count += filters.status.length;
+    count += filters.member.length;
+    return count;
+  }, [filters]);
+
   const handleFilterChange = (key: keyof typeof filters, value: string) => {
     setFilters(prev => {
       const current = prev[key] as string[];
@@ -90,30 +102,44 @@ export function FilterBar() {
   };
 
   return (
-    <div className="bg-card border-b border-slate-700/20 px-4 md:px-6 py-4 flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6 animate-in slide-in-from-top-1 duration-300 shadow-lg shadow-slate-950/10 overflow-x-auto lg:overflow-x-visible">
-      <div className="flex items-center justify-between lg:justify-start gap-2 text-primary shrink-0">
+    <div className="bg-card border-b border-slate-700/20 px-4 md:px-6 py-4 flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6 animate-in slide-in-from-top-1 duration-300 shadow-lg shadow-slate-950/10 overflow-visible">
+      <div className="flex items-center justify-between lg:justify-start gap-2 text-primary shrink-0 w-full lg:w-auto">
         <div className="flex items-center gap-2">
           <Filter size={18} className="text-brand-pink" />
           <span className="text-label font-bold uppercase tracking-widest hidden sm:inline-block">Dashboard Filters</span>
           <span className="text-label font-bold uppercase tracking-widest sm:hidden">Filters</span>
         </div>
         
-        {/* Clear All Filters (Mobile Only) */}
-        {isFiltered && (
-          <button 
-            onClick={resetFilters}
-            className="lg:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-pink/10 text-[10px] font-bold text-brand-pink border border-brand-pink/20"
+        {/* Toggle & Clear Buttons on Mobile/Tablet */}
+        <div className="flex items-center gap-2 lg:hidden">
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-elevated border border-slate-700/30 text-caption font-bold text-primary hover:bg-slate-700/40 transition-all uppercase tracking-wider"
           >
-            <X size={12} />
-            Clear All
+            {isExpanded ? 'Hide Filters' : 'Show Filters'}
+            {activeCount > 0 && (
+              <span className="flex items-center justify-center min-w-4 h-4 px-1 rounded-full bg-brand-pink text-white text-[9px] font-black">
+                {activeCount}
+              </span>
+            )}
           </button>
-        )}
+
+          {isFiltered && (
+            <button 
+              onClick={resetFilters}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-pink/10 text-[10px] font-bold text-brand-pink border border-brand-pink/20"
+            >
+              <X size={12} />
+              Clear All
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="h-6 w-px bg-slate-700/30 hidden lg:block" />
 
       {/* Responsive Filters Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:flex xl:items-center gap-4 lg:gap-6 w-full">
+      <div className={`${isExpanded ? 'grid' : 'hidden lg:flex'} grid-cols-1 sm:grid-cols-2 lg:flex lg:items-center lg:flex-wrap xl:flex-nowrap gap-4 lg:gap-6 w-full`}>
         {/* Search */}
         <div className="flex flex-col gap-1.5">
           <span className="text-[10px] font-bold text-muted uppercase tracking-widest ml-1">Keywords</span>

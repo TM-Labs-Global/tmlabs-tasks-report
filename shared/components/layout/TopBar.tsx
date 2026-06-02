@@ -59,16 +59,16 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
 
       {/* Actions */}
       <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2 mr-4">
+        <div className="flex items-center gap-2 mr-2 sm:mr-4">
           {isConfigured ? (
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20">
-              <Circle size={6} className="fill-green-500 text-green-500" />
-              <span className="text-[10px] font-bold text-green-500 uppercase tracking-widest">Live Sync Active</span>
+            <div className="flex items-center gap-1.5 px-2 py-1 sm:px-3 sm:py-1 rounded-full bg-green-500/10 border border-green-500/20" title="Live Sync Active">
+              <Circle size={6} className="fill-green-500 text-green-500 animate-pulse" />
+              <span className="text-[10px] font-bold text-green-500 uppercase tracking-widest hidden sm:inline-block">Live Sync Active</span>
             </div>
           ) : (
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20">
+            <div className="flex items-center gap-1.5 px-2 py-1 sm:px-3 sm:py-1 rounded-full bg-red-500/10 border border-red-500/20" title="Offline">
               <Circle size={6} className="fill-red-500 text-red-500" />
-              <span className="text-[10px] font-bold text-red-500 uppercase tracking-widest">Offline</span>
+              <span className="text-[10px] font-bold text-red-500 uppercase tracking-widest hidden sm:inline-block">Offline</span>
             </div>
           )}
         </div>
@@ -76,11 +76,10 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
         <button 
           onClick={refreshData}
           disabled={isLoading || !isConfigured}
-
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-caption font-bold transition-all shadow-sm ${isLoading ? 'bg-secondary text-muted' : 'bg-brand-pink text-white hover:bg-opacity-90 hover:scale-105 shadow-brand-pink/20'}`}
+          className={`flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 rounded-xl text-caption font-bold transition-all shadow-sm ${isLoading ? 'bg-secondary text-muted' : 'bg-brand-pink text-white hover:bg-opacity-90 hover:scale-105 shadow-brand-pink/20'}`}
         >
           {isLoading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
-          {isLoading ? 'Syncing...' : 'Sync Now'}
+          <span className="hidden sm:inline-block">{isLoading ? 'Syncing...' : 'Sync Now'}</span>
         </button>
 
         <div className="w-px h-6 bg-slate-700/20 mx-1" />

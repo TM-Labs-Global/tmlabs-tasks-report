@@ -145,16 +145,16 @@ export default function ReportingCenter() {
           <h1 className="text-h1 font-bold text-primary">Reporting Center</h1>
           <p className="text-body text-secondary">Premium operations and delivery reporting</p>
         </div>
-        <div className="flex items-center gap-3 w-full md:w-auto">
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
           {activeTab !== 'all' && (
-            <div className="flex items-center bg-card border border-slate-700/20 rounded-xl overflow-hidden shadow-sm">
+            <div className="flex items-center bg-card border border-slate-700/20 rounded-xl overflow-hidden shadow-sm w-full sm:w-auto justify-between sm:justify-start">
               <button 
                 onClick={() => handleOffsetChange(o => o - 1)}
                 className="p-2 hover:bg-elevated text-secondary hover:text-primary transition-colors"
               >
                 <ChevronLeft size={20} />
               </button>
-              <div className="px-4 py-2 text-caption font-bold text-primary border-x border-slate-700/10 min-w-[140px] text-center">
+              <div className="px-4 py-2 text-caption font-bold text-primary border-x border-slate-700/10 flex-1 sm:flex-none sm:min-w-[140px] text-center">
                 {periodLabel}
               </div>
               <button 
@@ -167,7 +167,7 @@ export default function ReportingCenter() {
           )}
           <Button 
             variant="primary" 
-            className="gap-2 flex-1 md:flex-initial bg-brand-navy shadow-lg shadow-brand-navy/20" 
+            className="gap-2 flex-1 sm:flex-none justify-center bg-brand-navy shadow-lg shadow-brand-navy/20 w-full sm:w-auto" 
             onClick={() => setIsExportModalOpen(true)}
           >
             <FileSpreadsheet size={18} />
