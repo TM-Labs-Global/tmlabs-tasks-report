@@ -28,11 +28,18 @@ async function getCryptoKey(secret: string): Promise<CryptoKey> {
   );
 }
 
+export interface SessionPayload {
+  email: string;
+  logId: string;
+  expiresAt: number;
+  role?: string;
+}
+
 /**
  * Signs a session payload and returns a token string.
  * The token format is: [base64urlEncodedPayload].[base64urlEncodedSignature]
  */
-export async function signSession(payload: { email: string; logId: string; expiresAt: number }): Promise<string> {
+export async function signSession(payload: SessionPayload): Promise<string> {
   const secret = process.env.JWT_SECRET || 'tm-labs-task-tracker-default-jwt-secret-key-32-chars-long';
   const key = await getCryptoKey(secret);
   
@@ -56,7 +63,7 @@ export async function signSession(payload: { email: string; logId: string; expir
  * Verifies a token string and returns the payload if valid.
  * Returns null if the signature is invalid or the session is expired.
  */
-export async function verifySession(token: string): Promise<{ email: string; logId: string; expiresAt: number } | null> {
+export async function verifySession(token: string): Promise<SessionPayload | null> {
   try {
     const parts = token.split('.');
     if (parts.length !== 2) return null;
@@ -80,7 +87,7 @@ export async function verifySession(token: string): Promise<{ email: string; log
     
     // Decode payload
     const payloadStr = base64urlDecode(encodedPayload);
-    const payload = JSON.parse(payloadStr) as { email: string; logId: string; expiresAt: number };
+    const payload = JSON.parse(payloadStr) as SessionPayload;
     
     // Check expiration
     if (Date.now() > payload.expiresAt) {

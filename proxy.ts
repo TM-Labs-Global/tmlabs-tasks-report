@@ -11,27 +11,34 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith('/api/auth') ||
     pathname === '/favicon.ico' ||
     pathname.startsWith('/public') ||
+    pathname.startsWith('/brand') ||
     pathname.match(/\.(png|jpg|jpeg|gif|svg|ico|css|js|woff|woff2)$/)
   ) {
     return NextResponse.next();
   }
 
+  const token = request.cookies.get('session_token')?.value;
+
   // Allow visiting the login page
   if (pathname === '/login') {
-    const token = request.cookies.get('session_token')?.value;
     if (token) {
-      const isValid = await verifySession(token);
-      if (isValid) {
-        // If already logged in, redirect to home page
-        return NextResponse.redirect(new URL('/', request.url));
+      const session = await verifySession(token);
+      if (session) {
+        // If already logged in, redirect to role-based home page
+        const role = session.role || 'staff';
+        if (role === 'staff') {
+          return NextResponse.redirect(new URL('/mytasks', request.url));
+        } else if (role === 'stakeholder') {
+          return NextResponse.redirect(new URL('/reporting', request.url));
+        } else {
+          return NextResponse.redirect(new URL('/', request.url));
+        }
       }
     }
     return NextResponse.next();
   }
 
   // 2. Protect all other paths
-  const token = request.cookies.get('session_token')?.value;
-
   if (!token) {
     // If it's an API request, return unauthorized JSON
     if (pathname.startsWith('/api/')) {
@@ -55,7 +62,33 @@ export async function proxy(request: NextRequest) {
     return response;
   }
 
-  // Session is valid, allow request to proceed
+  // 3. Enforce Role-Based Access Control
+  const role = session.role || 'staff';
+
+  if (role === 'staff') {
+    const isAllowedForStaff =
+      pathname === '/mytasks' ||
+      pathname.startsWith('/tasks/') ||
+      pathname === '/calendar' ||
+      pathname === '/settings' ||
+      pathname.startsWith('/api/');
+
+    if (!isAllowedForStaff) {
+      return NextResponse.redirect(new URL('/mytasks', request.url));
+    }
+  } else if (role === 'stakeholder') {
+    const isAllowedForStakeholder =
+      pathname === '/' ||
+      pathname === '/reporting' ||
+      pathname === '/settings' ||
+      pathname.startsWith('/api/');
+
+    if (!isAllowedForStakeholder) {
+      return NextResponse.redirect(new URL('/reporting', request.url));
+    }
+  }
+
+  // Session is valid and authorized, allow request to proceed
   return NextResponse.next();
 }
 

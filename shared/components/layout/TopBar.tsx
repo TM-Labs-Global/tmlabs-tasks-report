@@ -6,6 +6,8 @@ import { RefreshCw, Moon, Circle, Loader2, X, Menu } from 'lucide-react';
 import { useClickUp } from '@/shared/context/ClickUpContext';
 import { useFilters } from '@/shared/context/FilterContext';
 
+import { NotificationBell } from '@/features/notifications/NotificationBell';
+
 export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   const pathname = usePathname();
   const [userEmail, setUserEmail] = useState<string | null>(null);
@@ -25,6 +27,12 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
     if (pathname === '/reporting') return 'Reporting Center';
     if (pathname === '/team') return 'Team Performance';
     if (pathname === '/projects') return 'Project Health';
+    if (pathname === '/mytasks') return 'My Tasks';
+    if (pathname === '/workspace') return 'Projects & Tasks';
+    if (pathname.startsWith('/workspace/')) return 'List View';
+    if (pathname === '/calendar') return 'Workspace Calendar';
+    if (pathname === '/members') return 'Team Member Management';
+    if (pathname === '/settings') return 'Settings';
     return 'TM Labs Dashboard';
   };
 
@@ -95,6 +103,8 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
             </span>
           </div>
         )}
+
+        <NotificationBell />
 
         <button className="p-2 rounded-lg text-secondary hover:bg-elevated hover:text-primary transition-colors">
           <Moon size={20} />

@@ -3,7 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useAuth } from '@/shared/context/AuthContext';
 import { useClickUp } from '@/shared/context/ClickUpContext';
+
 import { 
   LayoutDashboard, 
   ClipboardList, 
@@ -13,34 +15,57 @@ import {
   ChevronRight,
   LogOut,
   History,
-  User as UserIcon
+  User as UserIcon,
+  CheckSquare,
+  Calendar,
+  Settings,
+  FolderOpen
 } from 'lucide-react';
-
-const navItems = [
-  { name: 'Overview', href: '/', icon: LayoutDashboard },
-  { name: 'Reporting Center', href: '/reporting', icon: ClipboardList },
-  { name: 'Team Performance', href: '/team', icon: Users },
-  { name: 'Project Health', href: '/projects', icon: FolderKanban },
-];
 
 export function Sidebar({ isOpen, onClose }: { isOpen?: boolean, onClose?: () => void }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
   const pathname = usePathname();
+  const { user, logout } = useAuth();
   const { token, teams, selectedTeamId, setToken } = useClickUp();
 
-  useEffect(() => {
-    fetch('/api/auth/me')
-      .then(res => res.json())
-      .then(data => {
-        if (data.authenticated) {
-          setUserEmail(data.email);
-        }
-      })
-      .catch(err => console.error('Error fetching user session:', err));
-  }, []);
-
   const selectedTeam = teams.find(t => t.id === selectedTeamId);
+  const role = user?.role || 'staff';
+
+  // Define navigation based on roles
+  const getNavItems = () => {
+    const items: { name: string; href: string; icon: any }[] = [];
+
+    // Overview/Reporting sections
+    if (role === 'product_manager' || role === 'stakeholder') {
+      items.push({ name: 'Overview', href: '/', icon: LayoutDashboard });
+      items.push({ name: 'Reporting Center', href: '/reporting', icon: ClipboardList });
+    }
+    if (role === 'product_manager') {
+      items.push({ name: 'Team Performance', href: '/team', icon: Users });
+      items.push({ name: 'Project Health', href: '/projects', icon: FolderKanban });
+    }
+
+    // New Workspace/Platform sections
+    if (role === 'product_manager' || role === 'staff') {
+      items.push({ name: 'My Tasks', href: '/mytasks', icon: CheckSquare });
+    }
+    if (role === 'product_manager') {
+      items.push({ name: 'Projects & Tasks', href: '/workspace', icon: FolderOpen });
+    }
+    if (role === 'product_manager' || role === 'staff') {
+      items.push({ name: 'Calendar', href: '/calendar', icon: Calendar });
+    }
+    if (role === 'product_manager') {
+      items.push({ name: 'Team Members', href: '/members', icon: Users });
+    }
+    
+    // Settings visible to all
+    items.push({ name: 'Settings', href: '/settings', icon: Settings });
+
+    return items;
+  };
+
+  const navItems = getNavItems();
 
   return (
     <>
@@ -63,7 +88,11 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean, onClose?: () =>
 
       {/* Logo Area */}
       <div className="h-14 flex items-center px-4 border-b border-slate-700/10">
-        <div className="w-8 h-8 rounded bg-gradient-to-br from-brand-pink to-brand-purple flex-shrink-0" />
+        <img 
+          src="/brand/White.png" 
+          alt="TM Labs Logo" 
+          className="w-8 h-8 object-contain flex-shrink-0" 
+        />
         {!isCollapsed && (
           <span className="ml-3 font-display font-bold text-lg text-primary truncate">
             TM Labs
@@ -72,9 +101,9 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean, onClose?: () =>
       </div>
 
       {/* Navigation Items */}
-      <nav className="flex-1 py-4 px-2 space-y-1">
+      <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
           const Icon = item.icon;
           
           return (
@@ -102,24 +131,26 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean, onClose?: () =>
 
       {/* Footer / User Profile Area */}
       <div className="p-2 border-t border-slate-700/10 space-y-1">
-        {!isCollapsed && (
+        {!isCollapsed && selectedTeam?.name && (
           <div className="mb-2 px-2 py-2 rounded-lg bg-elevated/40 border border-slate-700/10">
             <div className="text-[10px] text-muted uppercase tracking-widest font-bold mb-1">Workspace</div>
             <div className="text-caption font-semibold text-primary truncate">
-              {selectedTeam?.name || 'Loading...'}
+              {selectedTeam.name}
             </div>
           </div>
         )}
 
-        {!isCollapsed && userEmail && (
+        {!isCollapsed && user && (
           <div className="mb-2 px-2 py-2 rounded-lg bg-elevated/40 border border-slate-700/10 flex items-center gap-2 overflow-hidden">
             <div className="w-8 h-8 rounded-full bg-brand-pink/20 text-brand-pink flex items-center justify-center font-bold text-sm uppercase flex-shrink-0">
-              {userEmail[0]}
+              {user.email[0]}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="text-[10px] text-muted uppercase tracking-widest font-bold">User Session</div>
-              <div className="text-caption font-semibold text-primary truncate" title={userEmail}>
-                {userEmail}
+              <div className="text-[10px] text-muted uppercase tracking-widest font-bold">
+                {role.replace('_', ' ')}
+              </div>
+              <div className="text-caption font-semibold text-primary truncate" title={user.email}>
+                {user.email}
               </div>
             </div>
           </div>
@@ -128,13 +159,7 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean, onClose?: () =>
         <button
           onClick={async () => {
             if (confirm('Are you sure you want to logout?')) {
-              try {
-                await fetch('/api/auth/logout', { method: 'POST' });
-              } catch (err) {
-                console.error('Logout error:', err);
-              }
-              setToken('');
-              window.location.href = '/login';
+              await logout();
             }
           }}
           className="w-full flex items-center p-2 rounded-lg text-secondary hover:bg-red-500/10 hover:text-red-500 transition-colors group"

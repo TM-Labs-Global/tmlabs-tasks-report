@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TM Labs — Design System v1.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --pink:#FF3396;--purple:#6633FF;--navy:#0F1B35;--navy-2:#1A2847;--mid:#1E2D50;
+  --pink-dim:#CC2878;--purple-dim:#5228CC;
+  --pink-soft:rgba(255,51,150,0.12);--purple-soft:rgba(102,51,255,0.12);
+  --pink-border:rgba(255,51,150,0.3);--purple-border:rgba(102,51,255,0.3);
+  --text-primary:#F0F4FF;--text-secondary:#8A9CC8;--text-muted:#4A5A82;
+  --border:rgba(255,255,255,0.07);--border-strong:rgba(255,255,255,0.14);
+  --surface-1:#1A2440;--surface-2:#202C4A;--surface-3:#243054;
+  --radius:8px;
+  --font-display:'IBM Plex Sans',sans-serif;--font-body:'Geist',sans-serif;
+}
+body{background:var(--navy);color:var(--text-primary);font-family:var(--font-body);font-size:14px;line-height:1.6}
+.page{max-width:960px;margin:0 auto;padding:56px 40px}
+
+/* HEADER */
+.site-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:72px;padding-bottom:24px;border-bottom:1px solid var(--border)}
+.logo-mark{display:flex;align-items:center;gap:12px}
+.logo-blob{width:40px;height:40px;background:linear-gradient(135deg,var(--pink),var(--purple));border-radius:50% 50% 50% 30%;display:flex;align-items:center;justify-content:center}
+.logo-wordmark{font-family:var(--font-display);font-size:17px;font-weight:700;letter-spacing:0.1em}
+.version-pill{font-size:11px;font-weight:600;padding:4px 12px;border-radius:100px;background:var(--pink-soft);color:var(--pink);border:1px solid var(--pink-border)}
+
+/* HERO */
+.hero{margin-bottom:88px;text-align:center}
+.hero-eyebrow{font-size:11px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:var(--pink);margin-bottom:22px}
+.hero-title{font-family:var(--font-display);font-size:56px;font-weight:700;line-height:1.05;letter-spacing:-0.03em;margin-bottom:18px}
+.grad{background:linear-gradient(90deg,var(--pink),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-sub{font-size:17px;color:var(--text-secondary);max-width:540px;margin:0 auto;line-height:1.6}
+
+/* SECTIONS */
+.section{margin-bottom:80px}
+.section-header{display:flex;align-items:center;gap:14px;margin-bottom:28px}
+.section-num{font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--pink);font-family:var(--font-body)}
+.section-title{font-family:var(--font-display);font-size:18px;font-weight:600;color:var(--text-primary)}
+.section-header::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* COLORS */
+.colors-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;margin-bottom:28px}
+.swatch{border-radius:10px;overflow:hidden;border:1px solid var(--border)}
+.swatch-chip{height:80px}
+.swatch-info{padding:10px 12px;background:var(--surface-2)}
+.swatch-name{font-size:11px;font-weight:600;color:var(--text-primary);margin-bottom:3px}
+.swatch-hex{font-size:11px;font-family:monospace;color:var(--text-muted)}
+.grad-chip{background:linear-gradient(135deg,var(--pink),var(--purple))}
+.pink-chip{background:#FF3396}
+.purple-chip{background:#6633FF}
+.navy-chip{background:#0F1B35}
+.navy2-chip{background:#1A2847}
+.mid-chip{background:#1E2D50}
+.s1-chip{background:#1A2440}
+.s2-chip{background:#202C4A}
+
+.status-swatches{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:8px}
+.status-swatch{border-radius:8px;overflow:hidden;border:1px solid var(--border)}
+.status-swatch-chip{height:48px}
+.status-swatch-info{padding:8px 10px;background:var(--surface-2)}
+
+/* TYPOGRAPHY */
+.type-table{display:flex;flex-direction:column;gap:2px}
+.type-row{display:grid;grid-template-columns:1fr auto;gap:20px;align-items:baseline;padding:18px 22px;background:var(--surface-1);border-radius:10px;border:1px solid var(--border)}
+.type-meta{text-align:right}
+.type-token{font-size:11px;font-family:monospace;color:var(--pink);margin-bottom:2px}
+.type-spec{font-size:10px;color:var(--text-muted)}
+.t-display{font-family:var(--font-display);font-size:44px;font-weight:700;line-height:1.07;letter-spacing:-0.03em;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.t-h1{font-family:var(--font-display);font-size:30px;font-weight:600;line-height:1.12;letter-spacing:-0.02em}
+.t-h2{font-family:var(--font-display);font-size:22px;font-weight:600;line-height:1.2;letter-spacing:-0.01em}
+.t-h3{font-family:var(--font-display);font-size:17px;font-weight:600;line-height:1.3}
+.t-body-lg{font-family:var(--font-body);font-size:16px;font-weight:400;line-height:1.6;color:var(--text-secondary)}
+.t-body{font-family:var(--font-body);font-size:14px;font-weight:400;line-height:1.6;color:var(--text-secondary)}
+.t-caption{font-family:var(--font-body);font-size:12px;font-weight:400;line-height:1.5;color:var(--text-muted)}
+.t-overline{font-family:var(--font-body);font-size:11px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-muted)}
+.t-code{font-family:monospace;font-size:13px;color:var(--pink);background:var(--pink-soft);padding:2px 8px;border-radius:4px;border:1px solid var(--pink-border)}
+
+/* GRID HELPERS */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.four-col{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px}
+.full{grid-column:1/-1}
+
+/* CARD */
+.card{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:22px}
+.card-accent{border-color:var(--pink-border);background:linear-gradient(135deg,rgba(255,51,150,0.05),rgba(102,51,255,0.04))}
+.card-title{font-family:var(--font-display);font-size:14px;font-weight:600;color:var(--text-primary)}
+.card-sub{font-size:12px;color:var(--text-secondary);line-height:1.5;margin-top:4px}
+.comp-label{font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:14px}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:var(--radius);font-family:var(--font-body);font-weight:500;cursor:pointer;border:none;transition:all 0.14s;white-space:nowrap;font-size:14px}
+.btn-primary{background:linear-gradient(135deg,var(--pink),var(--purple));color:#fff;padding:10px 22px}
+.btn-primary:hover{opacity:0.85;transform:translateY(-1px)}
+.btn-secondary{background:var(--surface-3);color:var(--text-primary);padding:10px 22px;border:1px solid var(--border-strong)}
+.btn-secondary:hover{border-color:var(--pink-border);background:var(--surface-2)}
+.btn-ghost{background:transparent;color:var(--pink);padding:10px 22px;border:1px solid var(--pink-border)}
+.btn-ghost:hover{background:var(--pink-soft)}
+.btn-danger{background:rgba(239,68,68,0.1);color:#EF4444;padding:10px 22px;border:1px solid rgba(239,68,68,0.25)}
+.btn-sm{padding:7px 16px;font-size:12px}
+.btn-icn{width:36px;height:36px;padding:0;background:transparent;border:1px solid var(--border-strong);color:var(--text-secondary);border-radius:var(--radius)}
+.btn-icn:hover{border-color:var(--pink-border);color:var(--pink);background:var(--pink-soft)}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;gap:5px;border-radius:100px;font-size:11px;font-weight:600;padding:3px 10px}
+.badge::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor;opacity:0.8}
+.b-pink{background:var(--pink-soft);color:var(--pink);border:1px solid var(--pink-border)}
+.b-purple{background:var(--purple-soft);color:#A07EFF;border:1px solid var(--purple-border)}
+.b-green{background:rgba(34,197,94,0.1);color:#22C55E;border:1px solid rgba(34,197,94,0.25)}
+.b-red{background:rgba(239,68,68,0.1);color:#EF4444;border:1px solid rgba(239,68,68,0.25)}
+.b-amber{background:rgba(245,158,11,0.1);color:#F59E0B;border:1px solid rgba(245,158,11,0.25)}
+.b-grey{background:var(--surface-3);color:var(--text-secondary);border:1px solid var(--border-strong)}
+.b-no-dot::before{display:none}
+
+/* INPUTS */
+.input{background:var(--surface-2);border:1px solid var(--border-strong);border-radius:var(--radius);padding:10px 14px;font-size:14px;font-family:var(--font-body);color:var(--text-primary);width:100%;outline:none;transition:border 0.14s}
+.input:focus{border-color:var(--pink);box-shadow:0 0 0 3px var(--pink-soft)}
+.input::placeholder{color:var(--text-muted)}
+.input-error{border-color:#EF4444!important}
+.input-label{font-size:12px;font-weight:500;color:var(--text-secondary);display:block;margin-bottom:6px}
+.input-hint{font-size:11px;color:var(--text-muted);margin-top:5px}
+.input-hint.err{color:#EF4444}
+.select{appearance:none;background:var(--surface-2);border:1px solid var(--border-strong);border-radius:var(--radius);padding:10px 36px 10px 14px;font-size:14px;font-family:var(--font-body);color:var(--text-primary);width:100%;outline:none;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238A9CC8' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+.select:focus{border-color:var(--pink);box-shadow:0 0 0 3px var(--pink-soft);outline:none}
+
+/* PROGRESS */
+.prog-bar{height:6px;background:var(--surface-3);border-radius:100px;overflow:hidden}
+.prog-fill{height:100%;border-radius:100px;background:linear-gradient(90deg,var(--pink),var(--purple))}
+
+/* AVATARS */
+.av{border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:600;font-size:12px;flex-shrink:0}
+.av-sm{width:28px;height:28px;font-size:10px}
+.av-md{width:36px;height:36px;font-size:13px}
+.av-lg{width:48px;height:48px;font-size:16px}
+.av-pink{background:var(--pink-soft);color:var(--pink);border:1px solid var(--pink-border)}
+.av-purple{background:var(--purple-soft);color:#A07EFF;border:1px solid var(--purple-border)}
+.av-green{background:rgba(34,197,94,0.1);color:#22C55E;border:1px solid rgba(34,197,94,0.25)}
+.av-amber{background:rgba(245,158,11,0.1);color:#F59E0B;border:1px solid rgba(245,158,11,0.25)}
+.av-stack{display:flex}.av-stack .av{margin-left:-8px;border:2px solid var(--navy)}.av-stack .av:first-child{margin-left:0}
+
+/* TABS */
+.tab-group{display:flex;gap:2px;background:var(--surface-2);border-radius:var(--radius);padding:4px;border:1px solid var(--border);width:fit-content}
+.tab{padding:7px 16px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;color:var(--text-secondary);transition:all 0.14s;border:none;background:transparent;font-family:var(--font-body)}
+.tab.on{background:linear-gradient(135deg,var(--pink),var(--purple));color:#fff}
+.tab:not(.on):hover{color:var(--text-primary);background:var(--surface-3)}
+
+/* KPI */
+.kpi{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:20px}
+.kpi-label{font-size:10px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px}
+.kpi-value{font-family:var(--font-display);font-size:34px;font-weight:700;letter-spacing:-0.03em;line-height:1}
+.kpi-delta{font-size:12px;font-weight:500;margin-top:4px;color:#22C55E}
+.kpi-delta.neg{color:#EF4444}
+
+/* NOTIF */
+.notif{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;background:var(--surface-1);border-radius:10px;border:1px solid var(--border);margin-bottom:4px}
+.notif-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px}
+.notif-title{font-size:13px;font-weight:500;color:var(--text-primary);margin-bottom:2px}
+.notif-sub{font-size:12px;color:var(--text-secondary)}
+.notif-time{font-size:11px;color:var(--text-muted);white-space:nowrap;margin-left:auto}
+
+/* MODAL */
+.modal{background:var(--surface-2);border:1px solid var(--border);border-radius:14px;padding:26px;max-width:400px}
+.modal-title{font-family:var(--font-display);font-size:17px;font-weight:600;color:var(--text-primary);margin-bottom:10px}
+.modal-body{font-size:14px;color:var(--text-secondary);line-height:1.6;margin-bottom:20px}
+.modal-footer{display:flex;justify-content:flex-end;gap:10px}
+
+/* EMPTY */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:52px 24px;background:var(--surface-1);border:1px dashed var(--border-strong);border-radius:12px;text-align:center;gap:12px}
+.empty-icon{width:52px;height:52px;background:var(--pink-soft);border:1px solid var(--pink-border);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;color:var(--pink)}
+.empty-title{font-family:var(--font-display);font-size:16px;font-weight:600;color:var(--text-primary)}
+.empty-body{font-size:13px;color:var(--text-secondary);max-width:280px}
+
+/* SPACING TOKENS */
+.sp-row{display:flex;align-items:center;gap:16px;padding:8px 0;border-bottom:1px solid var(--border)}
+.sp-row:last-child{border-bottom:none}
+.sp-box{background:linear-gradient(135deg,var(--pink-soft),var(--purple-soft));border:1px solid var(--pink-border);border-radius:3px;flex-shrink:0}
+.sp-name{font-size:12px;font-family:monospace;color:var(--pink)}
+.sp-size{font-size:11px;color:var(--text-muted)}
+
+/* RADIUS */
+.r-grid{display:flex;gap:16px;flex-wrap:wrap}
+.r-item{display:flex;flex-direction:column;align-items:center;gap:8px}
+.r-box{width:56px;height:56px;background:var(--pink-soft);border:1px solid var(--pink-border)}
+
+/* TOKENS TABLE */
+.tok-row{display:flex;align-items:center;gap:12px;padding:8px 14px;border-radius:8px;background:var(--surface-1);border:1px solid var(--border);margin-bottom:4px}
+.tok-name{font-size:12px;font-family:monospace;color:var(--pink);flex:1}
+.tok-val{font-size:12px;font-family:monospace;color:var(--text-secondary)}
+.tok-dot{width:22px;height:22px;border-radius:4px;flex-shrink:0;border:1px solid var(--border-strong)}
+
+/* GRAD SECTION */
+.grad-box{height:76px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;color:rgba(255,255,255,0.6)}
+.g1{background:linear-gradient(135deg,#FF3396,#6633FF)}
+.g2{background:linear-gradient(90deg,#FF3396,#6633FF)}
+.g3{background:linear-gradient(180deg,#FF3396,#6633FF)}
+.g4{background:linear-gradient(135deg,#0F1B35,#1E2D50)}
+
+/* DIVIDER */
+.divider{height:1px;background:var(--border);margin:6px 0}
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- HEADER -->
+<header class="site-header">
+  <div class="logo-mark">
+    <div class="logo-blob">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><ellipse cx="8" cy="12" rx="6" ry="8" fill="white" opacity="0.9"/><ellipse cx="16" cy="12" rx="6" ry="8" fill="white" opacity="0.9"/></svg>
+    </div>
+    <span class="logo-wordmark">TM LABS</span>
+  </div>
+  <span class="version-pill">Design System v1.0</span>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <p class="hero-eyebrow">Brand &amp; Component Guidelines</p>
+  <h1 class="hero-title">Built on<br><span class="grad">TM Labs</span> precision</h1>
+  <p class="hero-sub">Tokens, type, color, and components for every surface across the TM Labs product suite.</p>
+</section>
+
+<!-- 01 COLOR -->
+<section class="section">
+  <div class="section-header"><span class="section-num">01</span><span class="section-title">Color</span></div>
+
+  <p style="font-size:10px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px">Primary palette</p>
+  <div class="colors-grid" style="margin-bottom:24px">
+    <div class="swatch"><div class="swatch-chip grad-chip"></div><div class="swatch-info"><div class="swatch-name">Brand Gradient</div><div class="swatch-hex">#FF3396 → #6633FF</div></div></div>
+    <div class="swatch"><div class="swatch-chip pink-chip"></div><div class="swatch-info"><div class="swatch-name">Neon Pink</div><div class="swatch-hex">#FF3396</div></div></div>
+    <div class="swatch"><div class="swatch-chip purple-chip"></div><div class="swatch-info"><div class="swatch-name">Neon Purple</div><div class="swatch-hex">#6633FF</div></div></div>
+    <div class="swatch"><div class="swatch-chip navy-chip"></div><div class="swatch-info"><div class="swatch-name">Deep Navy</div><div class="swatch-hex">#0F1B35</div></div></div>
+    <div class="swatch"><div class="swatch-chip navy2-chip"></div><div class="swatch-info"><div class="swatch-name">Navy 2</div><div class="swatch-hex">#1A2847</div></div></div>
+    <div class="swatch"><div class="swatch-chip mid-chip"></div><div class="swatch-info"><div class="swatch-name">Mid Navy</div><div class="swatch-hex">#1E2D50</div></div></div>
+    <div class="swatch"><div class="swatch-chip s1-chip"></div><div class="swatch-info"><div class="swatch-name">Surface 1</div><div class="swatch-hex">#1A2440</div></div></div>
+    <div class="swatch"><div class="swatch-chip s2-chip"></div><div class="swatch-info"><div class="swatch-name">Surface 2</div><div class="swatch-hex">#202C4A</div></div></div>
+  </div>
+
+  <p style="font-size:10px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;margin-top:8px">Semantic / status colors</p>
+  <div style="display:flex;flex-direction:column;gap:4px">
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surface-1);border-radius:8px;border:1px solid var(--border)"><div style="width:22px;height:22px;border-radius:50%;background:#22C55E;flex-shrink:0"></div><span style="font-size:13px;font-weight:500;flex:1">Success</span><span style="font-size:11px;color:var(--text-muted)">Completed, done, active tasks</span><span style="font-size:11px;font-family:monospace;color:var(--text-secondary)">#22C55E</span></div>
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surface-2);border-radius:8px;border:1px solid var(--border)"><div style="width:22px;height:22px;border-radius:50%;background:#F59E0B;flex-shrink:0"></div><span style="font-size:13px;font-weight:500;flex:1">Warning / At Risk</span><span style="font-size:11px;color:var(--text-muted)">Spillovers, at-risk projects</span><span style="font-size:11px;font-family:monospace;color:var(--text-secondary)">#F59E0B</span></div>
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surface-1);border-radius:8px;border:1px solid var(--border)"><div style="width:22px;height:22px;border-radius:50%;background:#EF4444;flex-shrink:0"></div><span style="font-size:13px;font-weight:500;flex:1">Danger / Blocked</span><span style="font-size:11px;color:var(--text-muted)">Blockers, overdue, errors</span><span style="font-size:11px;font-family:monospace;color:var(--text-secondary)">#EF4444</span></div>
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surface-2);border-radius:8px;border:1px solid var(--border)"><div style="width:22px;height:22px;border-radius:50%;background:#8A9CC8;flex-shrink:0"></div><span style="font-size:13px;font-weight:500;flex:1">Secondary text</span><span style="font-size:11px;color:var(--text-muted)">Supporting copy, captions</span><span style="font-size:11px;font-family:monospace;color:var(--text-secondary)">#8A9CC8</span></div>
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surface-1);border-radius:8px;border:1px solid var(--border)"><div style="width:22px;height:22px;border-radius:50%;background:#4A5A82;flex-shrink:0"></div><span style="font-size:13px;font-weight:500;flex:1">Muted / Disabled</span><span style="font-size:11px;color:var(--text-muted)">Placeholders, disabled states</span><span style="font-size:11px;font-family:monospace;color:var(--text-secondary)">#4A5A82</span></div>
+  </div>
+</section>
+
+<!-- 02 GRADIENTS -->
+<section class="section">
+  <div class="section-header"><span class="section-num">02</span><span class="section-title">Gradients</span></div>
+  <div class="two-col">
+    <div><div class="grad-box g1" style="margin-bottom:8px">135° — primary use</div><code style="font-size:11px;color:var(--text-muted)">linear-gradient(135deg, #FF3396, #6633FF)</code></div>
+    <div><div class="grad-box g2" style="margin-bottom:8px">90° — horizontal</div><code style="font-size:11px;color:var(--text-muted)">linear-gradient(90deg, #FF3396, #6633FF)</code></div>
+    <div><div class="grad-box g3" style="margin-bottom:8px">180° — vertical</div><code style="font-size:11px;color:var(--text-muted)">linear-gradient(180deg, #FF3396, #6633FF)</code></div>
+    <div><div class="grad-box g4" style="margin-bottom:8px">Dark surface</div><code style="font-size:11px;color:var(--text-muted)">linear-gradient(135deg, #0F1B35, #1E2D50)</code></div>
+  </div>
+</section>
+
+<!-- 03 TYPOGRAPHY -->
+<section class="section">
+  <div class="section-header"><span class="section-num">03</span><span class="section-title">Typography</span></div>
+  <div class="two-col" style="margin-bottom:24px">
+    <div class="card" style="display:flex;flex-direction:column;gap:4px">
+      <span style="font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted)">Display &amp; Headings</span>
+      <div style="font-family:'IBM Plex Sans',sans-serif;font-size:24px;font-weight:700;color:var(--text-primary)">IBM Plex Sans</div>
+      <div style="font-size:12px;color:var(--text-muted)">Weights: 400 · 500 · 600 · 700</div>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column;gap:4px">
+      <span style="font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted)">Body &amp; UI</span>
+      <div style="font-family:'Geist',sans-serif;font-size:24px;font-weight:400;color:var(--text-primary)">Geist</div>
+      <div style="font-size:12px;color:var(--text-muted)">Weights: 300 · 400 · 500 · 600</div>
+    </div>
+  </div>
+  <div class="type-table">
+    <div class="type-row"><div><div class="t-display">Accelerate growth</div></div><div class="type-meta"><div class="type-token">display</div><div class="type-spec">IBM Plex Sans · 44px · 700 · −0.03em</div></div></div>
+    <div class="type-row"><div><div class="t-h1">Project Management Platform</div></div><div class="type-meta"><div class="type-token">heading-1</div><div class="type-spec">IBM Plex Sans · 30px · 600 · −0.02em</div></div></div>
+    <div class="type-row"><div><div class="t-h2">Team Performance Overview</div></div><div class="type-meta"><div class="type-token">heading-2</div><div class="type-spec">IBM Plex Sans · 22px · 600 · −0.01em</div></div></div>
+    <div class="type-row"><div><div class="t-h3">Active Projects</div></div><div class="type-meta"><div class="type-token">heading-3</div><div class="type-spec">IBM Plex Sans · 17px · 600</div></div></div>
+    <div class="type-row"><div><div class="t-body-lg">Track delivery speed, blockers, and workload across all active projects in real time.</div></div><div class="type-meta"><div class="type-token">body-lg</div><div class="type-spec">Geist · 16px · 400 · 1.6</div></div></div>
+    <div class="type-row"><div><div class="t-body">Tasks completed this week, monthly trends, and overdue items by assignee.</div></div><div class="type-meta"><div class="type-token">body</div><div class="type-spec">Geist · 14px · 400 · 1.6</div></div></div>
+    <div class="type-row"><div><div class="t-caption">Last updated 3 minutes ago · 14 tasks synced</div></div><div class="type-meta"><div class="type-token">caption</div><div class="type-spec">Geist · 12px · 400 · 1.5</div></div></div>
+    <div class="type-row"><div><div class="t-overline">Section label</div></div><div class="type-meta"><div class="type-token">overline</div><div class="type-spec">Geist · 11px · 600 · 0.14em · UPPER</div></div></div>
+    <div class="type-row"><div><div class="t-code">task.status === 'blocked'</div></div><div class="type-meta"><div class="type-token">mono</div><div class="type-spec">monospace · 13px · on pink tint</div></div></div>
+  </div>
+</section>
+
+<!-- 04 BUTTONS -->
+<section class="section">
+  <div class="section-header"><span class="section-num">04</span><span class="section-title">Buttons</span></div>
+  <div class="card full">
+    <p class="comp-label">Variants</p>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:20px">
+      <button class="btn btn-primary">Create task</button>
+      <button class="btn btn-secondary">Export report</button>
+      <button class="btn btn-ghost">View details</button>
+      <button class="btn btn-danger">Delete project</button>
+    </div>
+    <p class="comp-label">Small</p>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:20px">
+      <button class="btn btn-primary btn-sm">New task</button>
+      <button class="btn btn-secondary btn-sm">Filter</button>
+      <button class="btn btn-ghost btn-sm">Cancel</button>
+      <button class="btn btn-danger btn-sm">Remove</button>
+    </div>
+    <p class="comp-label">Icon buttons</p>
+    <div style="display:flex;gap:10px;align-items:center">
+      <button class="btn btn-primary" style="width:36px;height:36px;padding:0;font-size:18px;border-radius:var(--radius)">+</button>
+      <button class="btn btn-icn" title="Grid view">⊞</button>
+      <button class="btn btn-icn" title="Download">↓</button>
+      <button class="btn btn-icn" title="Refresh">⟳</button>
+      <button class="btn btn-icn" title="Settings">⚙</button>
+    </div>
+  </div>
+</section>
+
+<!-- 05 BADGES -->
+<section class="section">
+  <div class="section-header"><span class="section-num">05</span><span class="section-title">Badges &amp; Tags</span></div>
+  <div class="card full">
+    <p class="comp-label">Status</p>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px">
+      <span class="badge b-green">Completed</span>
+      <span class="badge b-purple">In Progress</span>
+      <span class="badge b-amber">At Risk</span>
+      <span class="badge b-red">Blocked</span>
+      <span class="badge b-pink">Urgent</span>
+      <span class="badge b-grey">Backlog</span>
+    </div>
+    <p class="comp-label">Priority</p>
+    <div style="display:flex;flex-wrap:wrap;gap:8px">
+      <span class="badge b-red b-no-dot" style="font-size:10px">⬆ Urgent</span>
+      <span class="badge b-pink b-no-dot" style="font-size:10px">↑ High</span>
+      <span class="badge b-purple b-no-dot" style="font-size:10px">→ Normal</span>
+      <span class="badge b-grey b-no-dot" style="font-size:10px">↓ Low</span>
+    </div>
+  </div>
+</section>
+
+<!-- 06 FORMS -->
+<section class="section">
+  <div class="section-header"><span class="section-num">06</span><span class="section-title">Form Elements</span></div>
+  <div class="two-col">
+    <div class="card">
+      <p class="comp-label">Text inputs</p>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div><label class="input-label">Task name</label><input class="input" placeholder="e.g. Design onboarding flow" /><span class="input-hint">Be specific to help your team</span></div>
+        <div><label class="input-label">Due date</label><input class="input input-error" value="invalid-date" /><span class="input-hint err">Enter a valid date (MM/DD/YYYY)</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <p class="comp-label">Select &amp; textarea</p>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div><label class="input-label">Assignee</label><select class="select"><option>Rossie — Product Manager</option><option>Emmanuel — Developer</option><option>Raphael — Designer</option></select></div>
+        <div><label class="input-label">Description</label><textarea class="input" rows="3" placeholder="What needs to be done?" style="resize:vertical;line-height:1.5"></textarea></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 07 CARDS -->
+<section class="section">
+  <div class="section-header"><span class="section-num">07</span><span class="section-title">Cards</span></div>
+  <div class="two-col">
+    <div class="card">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px">
+        <div class="card-title">Getly Dashboard</div>
+        <span class="badge b-green" style="font-size:10px">On Track</span>
+      </div>
+      <div class="card-sub">Retention and acquisition metrics for the Getly product suite. 12 of 14 tasks complete.</div>
+      <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px">
+        <div class="av-stack"><div class="av av-sm av-pink">RE</div><div class="av av-sm av-purple">JS</div><div class="av av-sm av-green">KZ</div></div>
+        <div class="prog-bar" style="flex:1"><div class="prog-fill" style="width:86%"></div></div>
+        <span style="font-size:11px;color:var(--text-muted)">86%</span>
+      </div>
+    </div>
+    <div class="card card-accent">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px">
+        <div class="card-title">The Hive Platform</div>
+        <span class="badge b-amber" style="font-size:10px">At Risk</span>
+      </div>
+      <div class="card-sub">AI-powered marketing platform. Investor deck and PRD in final review. 2 blockers active.</div>
+      <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--pink-border);display:flex;align-items:center;gap:10px">
+        <div class="av-stack"><div class="av av-sm av-pink">ME</div><div class="av av-sm av-amber">RK</div></div>
+        <div class="prog-bar" style="flex:1"><div class="prog-fill" style="width:47%"></div></div>
+        <span style="font-size:11px;color:var(--text-muted)">47%</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 08 KPI -->
+<section class="section">
+  <div class="section-header"><span class="section-num">08</span><span class="section-title">KPI Cards</span></div>
+  <div class="four-col">
+    <div class="kpi"><div class="kpi-label">Total Tasks</div><div class="kpi-value">148</div><div class="kpi-delta">+12 this week</div></div>
+    <div class="kpi"><div class="kpi-label">Completed</div><div class="kpi-value">94</div><div class="kpi-delta">↑ 63.5% rate</div></div>
+    <div class="kpi"><div class="kpi-label">Blocked</div><div class="kpi-value" style="color:#EF4444">7</div><div class="kpi-delta neg">3 critical</div></div>
+    <div class="kpi"><div class="kpi-label">Spillovers</div><div class="kpi-value" style="background:linear-gradient(90deg,var(--pink),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">12</div><div class="kpi-delta neg">from last week</div></div>
+  </div>
+</section>
+
+<!-- 09 AVATARS -->
+<section class="section">
+  <div class="section-header"><span class="section-num">09</span><span class="section-title">Avatars &amp; Members</span></div>
+  <div class="card full">
+    <div style="display:flex;flex-wrap:wrap;gap:32px;align-items:center">
+      <div style="display:flex;gap:10px;align-items:center">
+        <div class="av av-lg av-pink">RE</div>
+        <div class="av av-md av-purple">JS</div>
+        <div class="av av-sm av-green">KZ</div>
+      </div>
+      <div style="width:1px;height:44px;background:var(--border)"></div>
+      <div class="av-stack">
+        <div class="av av-md av-pink">RE</div>
+        <div class="av av-md av-purple">JS</div>
+        <div class="av av-md av-green">KZ</div>
+        <div class="av av-md" style="background:var(--surface-3);color:var(--text-secondary);border:2px solid var(--navy);font-size:10px">+4</div>
+      </div>
+      <div style="width:1px;height:44px;background:var(--border)"></div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;align-items:center;gap:10px"><div class="av av-sm av-pink">RE</div><div><div style="font-size:13px;font-weight:500;color:var(--text-primary)">Rossie</div><div style="font-size:11px;color:var(--text-muted)">Product Manager</div></div><span class="badge b-pink b-no-dot" style="margin-left:8px;font-size:10px">PM</span></div>
+        <div style="display:flex;align-items:center;gap:10px"><div class="av av-sm av-purple">JU</div><div><div style="font-size:13px;font-weight:500;color:var(--text-primary)">John Uguru</div><div style="font-size:11px;color:var(--text-muted)">Developer</div></div><span class="badge b-grey b-no-dot" style="margin-left:8px;font-size:10px">Staff</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 10 TABS -->
+<section class="section">
+  <div class="section-header"><span class="section-num">10</span><span class="section-title">Tabs &amp; Navigation</span></div>
+  <div class="card full">
+    <p class="comp-label" style="margin-bottom:14px">Dashboard navigation</p>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="tab-group">
+        <button class="tab on">Overview</button>
+        <button class="tab">Reporting</button>
+        <button class="tab">Team</button>
+        <button class="tab">Projects</button>
+      </div>
+      <div class="tab-group">
+        <button class="tab on">List</button>
+        <button class="tab">Board</button>
+        <button class="tab">Calendar</button>
+      </div>
+      <div class="tab-group">
+        <button class="tab on">Weekly</button>
+        <button class="tab">Monthly</button>
+        <button class="tab">All Time</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 11 PROGRESS & STATUS -->
+<section class="section">
+  <div class="section-header"><span class="section-num">11</span><span class="section-title">Progress &amp; Status</span></div>
+  <div class="two-col">
+    <div class="card">
+      <p class="comp-label">Progress bars</p>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:12px;font-weight:500;color:var(--text-secondary)">Getly Dashboard</span><span style="font-size:12px;font-weight:600;color:var(--text-primary)">86%</span></div><div class="prog-bar"><div class="prog-fill" style="width:86%"></div></div></div>
+        <div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:12px;font-weight:500;color:var(--text-secondary)">The Hive Platform</span><span style="font-size:12px;font-weight:600;color:var(--text-primary)">47%</span></div><div class="prog-bar"><div class="prog-fill" style="width:47%"></div></div></div>
+        <div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span style="font-size:12px;font-weight:500;color:var(--text-secondary)">Confetti App</span><span style="font-size:12px;font-weight:600;color:var(--text-primary)">12%</span></div><div class="prog-bar"><div class="prog-fill" style="width:12%"></div></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <p class="comp-label">Task status rows</p>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface-2);border-radius:8px;border:1px solid var(--border)"><div style="display:flex;align-items:center;gap:8px"><div style="width:7px;height:7px;border-radius:50%;background:#22C55E"></div><span style="font-size:13px;color:var(--text-primary)">Analytics pipeline</span></div><span class="badge b-green b-no-dot" style="font-size:10px">Done</span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface-1);border-radius:8px;border:1px solid var(--border)"><div style="display:flex;align-items:center;gap:8px"><div style="width:7px;height:7px;border-radius:50%;background:var(--pink)"></div><span style="font-size:13px;color:var(--text-primary)">Design system tokens</span></div><span class="badge b-purple b-no-dot" style="font-size:10px">In Progress</span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface-2);border-radius:8px;border:1px solid var(--border)"><div style="display:flex;align-items:center;gap:8px"><div style="width:7px;height:7px;border-radius:50%;background:#EF4444"></div><span style="font-size:13px;color:var(--text-primary)">Stakeholder deck</span></div><span class="badge b-red b-no-dot" style="font-size:10px">Blocked</span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--surface-1);border-radius:8px;border:1px solid var(--border)"><div style="display:flex;align-items:center;gap:8px"><div style="width:7px;height:7px;border-radius:50%;background:#F59E0B"></div><span style="font-size:13px;color:var(--text-primary)">API integration</span></div><span class="badge b-amber b-no-dot" style="font-size:10px">At Risk</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 12 NOTIFICATIONS -->
+<section class="section">
+  <div class="section-header"><span class="section-num">12</span><span class="section-title">Notifications</span></div>
+  <div class="notif"><div class="notif-icon" style="background:var(--pink-soft);color:var(--pink)">⊕</div><div style="flex:1"><div class="notif-title">Task assigned to you</div><div class="notif-sub">Rossie assigned you to <strong style="color:var(--text-primary)">Design system tokens</strong></div></div><span class="notif-time">2m ago</span></div>
+  <div class="notif"><div class="notif-icon" style="background:rgba(239,68,68,0.12);color:#EF4444">⚠</div><div style="flex:1"><div class="notif-title">Task due tomorrow</div><div class="notif-sub"><strong style="color:var(--text-primary)">API integration spec</strong> is due on Thursday</div></div><span class="notif-time">1h ago</span></div>
+  <div class="notif"><div class="notif-icon" style="background:rgba(34,197,94,0.1);color:#22C55E">✓</div><div style="flex:1"><div class="notif-title">Blocker resolved</div><div class="notif-sub"><strong style="color:var(--text-primary)">Auth flow</strong> — your waiting task is now unblocked</div></div><span class="notif-time">3h ago</span></div>
+</section>
+
+<!-- 13 MODAL & EMPTY -->
+<section class="section">
+  <div class="section-header"><span class="section-num">13</span><span class="section-title">Modal &amp; Empty State</span></div>
+  <div class="two-col">
+    <div class="modal">
+      <div class="modal-title">Delete project?</div>
+      <div class="modal-body">This will permanently delete <strong style="color:var(--text-primary)">The Hive</strong> and all its tasks, comments, and attachments. This cannot be undone.</div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm">Cancel</button>
+        <button class="btn btn-danger btn-sm">Delete project</button>
+      </div>
+    </div>
+    <div class="empty">
+      <div class="empty-icon">⊡</div>
+      <div class="empty-title">No tasks yet</div>
+      <div class="empty-body">Create your first task to start tracking work across this project.</div>
+      <button class="btn btn-primary btn-sm" style="margin-top:4px">Create task</button>
+    </div>
+  </div>
+</section>
+
+<!-- 14 SPACING -->
+<section class="section">
+  <div class="section-header"><span class="section-num">14</span><span class="section-title">Spacing Scale</span></div>
+  <div class="card full">
+    <p class="comp-label">Base-4 scale</p>
+    <div>
+      <div class="sp-row"><div class="sp-box" style="width:4px;height:18px"></div><div><span class="sp-name">--space-1</span> <span class="sp-size">4px · icon inner padding</span></div></div>
+      <div class="sp-row"><div class="sp-box" style="width:8px;height:18px"></div><div><span class="sp-name">--space-2</span> <span class="sp-size">8px · gap between badge and label</span></div></div>
+      <div class="sp-row"><div class="sp-box" style="width:12px;height:18px"></div><div><span class="sp-name">--space-3</span> <span class="sp-size">12px · card inner gap</span></div></div>
+      <div class="sp-row"><div class="sp-box" style="width:16px;height:18px"></div><div><span class="sp-name">--space-4</span> <span class="sp-size">16px · section sub-gap</span></div></div>
+      <div class="sp-row"><div class="sp-box" style="width:24px;height:18px"></div><div><span class="sp-name">--space-6</span> <span class="sp-size">24px · card padding</span></div></div>
+      <div class="sp-row"><div class="sp-box" style="width:32px;height:18px"></div><div><span class="sp-name">--space-8</span> <span class="sp-size">32px · page gutter</span></div></div>
+      <div class="sp-row"><div class="sp-box" style="width:48px;height:18px"></div><div><span class="sp-name">--space-12</span> <span class="sp-size">48px · between major sections</span></div></div>
+      <div class="sp-row"><div class="sp-box" style="width:64px;height:18px"></div><div><span class="sp-name">--space-16</span> <span class="sp-size">64px · hero breathing room</span></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 15 RADIUS -->
+<section class="section">
+  <div class="section-header"><span class="section-num">15</span><span class="section-title">Border Radius</span></div>
+  <div class="card full">
+    <div class="r-grid">
+      <div class="r-item"><div class="r-box" style="border-radius:4px"></div><code style="font-size:10px;color:var(--pink)">--r-sm</code><span style="font-size:10px;color:var(--text-muted)">4px · tags</span></div>
+      <div class="r-item"><div class="r-box" style="border-radius:8px"></div><code style="font-size:10px;color:var(--pink)">--r-md</code><span style="font-size:10px;color:var(--text-muted)">8px · inputs, btns</span></div>
+      <div class="r-item"><div class="r-box" style="border-radius:12px"></div><code style="font-size:10px;color:var(--pink)">--r-lg</code><span style="font-size:10px;color:var(--text-muted)">12px · cards</span></div>
+      <div class="r-item"><div class="r-box" style="border-radius:16px"></div><code style="font-size:10px;color:var(--pink)">--r-xl</code><span style="font-size:10px;color:var(--text-muted)">16px · modals</span></div>
+      <div class="r-item"><div class="r-box" style="border-radius:100px"></div><code style="font-size:10px;color:var(--pink)">--r-pill</code><span style="font-size:10px;color:var(--text-muted)">100px · badges</span></div>
+      <div class="r-item"><div class="r-box" style="border-radius:50%"></div><code style="font-size:10px;color:var(--pink)">--r-circle</code><span style="font-size:10px;color:var(--text-muted)">50% · avatars</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 16 TOKEN REFERENCE -->
+<section class="section">
+  <div class="section-header"><span class="section-num">16</span><span class="section-title">CSS Token Reference</span></div>
+  <div class="two-col">
+    <div>
+      <p style="font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px">Color tokens</p>
+      <div class="tok-row"><span class="tok-name">--pink</span><span class="tok-val">#FF3396</span><div class="tok-dot" style="background:#FF3396"></div></div>
+      <div class="tok-row"><span class="tok-name">--purple</span><span class="tok-val">#6633FF</span><div class="tok-dot" style="background:#6633FF"></div></div>
+      <div class="tok-row"><span class="tok-name">--navy</span><span class="tok-val">#0F1B35</span><div class="tok-dot" style="background:#0F1B35;border-color:rgba(255,255,255,0.15)"></div></div>
+      <div class="tok-row"><span class="tok-name">--surface-1</span><span class="tok-val">#1A2440</span><div class="tok-dot" style="background:#1A2440;border-color:rgba(255,255,255,0.15)"></div></div>
+      <div class="tok-row"><span class="tok-name">--surface-2</span><span class="tok-val">#202C4A</span><div class="tok-dot" style="background:#202C4A;border-color:rgba(255,255,255,0.15)"></div></div>
+      <div class="tok-row"><span class="tok-name">--text-primary</span><span class="tok-val">#F0F4FF</span><div class="tok-dot" style="background:#F0F4FF"></div></div>
+      <div class="tok-row"><span class="tok-name">--text-secondary</span><span class="tok-val">#8A9CC8</span><div class="tok-dot" style="background:#8A9CC8"></div></div>
+      <div class="tok-row"><span class="tok-name">--text-muted</span><span class="tok-val">#4A5A82</span><div class="tok-dot" style="background:#4A5A82"></div></div>
+    </div>
+    <div>
+      <p style="font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px">Tint &amp; border tokens</p>
+      <div class="tok-row"><span class="tok-name">--pink-soft</span><span class="tok-val">FF3396 / 12%</span><div class="tok-dot" style="background:rgba(255,51,150,0.12);border-color:rgba(255,51,150,0.3)"></div></div>
+      <div class="tok-row"><span class="tok-name">--purple-soft</span><span class="tok-val">6633FF / 12%</span><div class="tok-dot" style="background:rgba(102,51,255,0.12);border-color:rgba(102,51,255,0.3)"></div></div>
+      <div class="tok-row"><span class="tok-name">--pink-border</span><span class="tok-val">FF3396 / 30%</span><div class="tok-dot" style="background:transparent;border:2px solid rgba(255,51,150,0.3)"></div></div>
+      <div class="tok-row"><span class="tok-name">--border</span><span class="tok-val">fff / 7%</span><div class="tok-dot" style="background:transparent;border:2px solid rgba(255,255,255,0.07)"></div></div>
+      <div class="tok-row"><span class="tok-name">--border-strong</span><span class="tok-val">fff / 14%</span><div class="tok-dot" style="background:transparent;border:2px solid rgba(255,255,255,0.14)"></div></div>
+      <p style="font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px;margin-top:16px">Font tokens</p>
+      <div class="tok-row"><span class="tok-name">--font-display</span><span class="tok-val" style="font-family:'IBM Plex Sans',sans-serif">IBM Plex Sans</span></div>
+      <div class="tok-row"><span class="tok-name">--font-body</span><span class="tok-val" style="font-family:'Geist',sans-serif">Geist</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer style="padding-top:32px;margin-top:16px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="logo-blob" style="width:26px;height:26px">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><ellipse cx="8" cy="12" rx="6" ry="8" fill="white" opacity="0.9"/><ellipse cx="16" cy="12" rx="6" ry="8" fill="white" opacity="0.9"/></svg>
+    </div>
+    <span style="font-size:13px;font-weight:700;letter-spacing:0.08em;color:var(--text-secondary)">TM LABS</span>
+  </div>
+  <span style="font-size:11px;color:var(--text-muted)">Design System v1.0 · 2025 · IBM Plex Sans + Geist</span>
+</footer>
+
+</div>
+</body>
+</html>

@@ -37,9 +37,10 @@ export function FilterBar() {
         const search = filters.search.toLowerCase();
         const matchesName = task.name.toLowerCase().includes(search);
         const matchesProject = task.project.toLowerCase().includes(search);
-        const matchesAssignee = task.assignee?.name?.toLowerCase().includes(search);
-        const matchesDesc = task.text_content?.toLowerCase().includes(search);
+        const matchesAssignee = task.assignee?.name?.toLowerCase()?.includes(search);
+        const matchesDesc = task.text_content?.toLowerCase()?.includes(search);
         if (!matchesName && !matchesProject && !matchesAssignee && !matchesDesc) {
+
           return false;
         }
       }
@@ -49,7 +50,7 @@ export function FilterBar() {
         const start = new Date(filters.startDate).getTime();
         const end = new Date(filters.endDate).getTime();
         
-        const taskDueDate = task.dueDate ? new Date(task.dueDate).getTime() : (task.due_date_raw ? new Date(task.due_date_raw).getTime() : null);
+        const taskDueDate = task.due_date_raw || (task.dueDate ? new Date(task.dueDate).getTime() : null);
         const taskClosedDate = task.date_closed ? parseInt(task.date_closed) : null;
         
         const dueInRange = taskDueDate && taskDueDate >= start && taskDueDate <= end;
@@ -72,7 +73,10 @@ export function FilterBar() {
   const activeMemberIds = new Set(
     tasksForMemberSelect.flatMap(t => t.assignees?.map((a: any) => String(a.id)) || [])
   );
-  const availableMembers = members.filter(m => activeMemberIds.has(String(m.user.id)));
+  const availableMembers = members.filter((m: any) => {
+    const memberId = m.id || m.user?.id;
+    return activeMemberIds.has(String(memberId));
+  });
 
   const handleFilterChange = (key: keyof typeof filters, value: string) => {
     setFilters(prev => {
@@ -179,9 +183,11 @@ export function FilterBar() {
             value=""
           >
             <option value="">All Team</option>
-            {availableMembers.map(m => (
-              <option key={m.user.id} value={m.user.id}>{m.user.username}</option>
-            ))}
+              {availableMembers.map((m: any) => {
+                const memberId = m.id || m.user?.id;
+                const memberName = m.full_name || m.user?.username || m.email?.split('@')[0];
+                return <option key={memberId} value={memberId}>{memberName}</option>;
+              })}
           </select>
         </div>
 
@@ -218,8 +224,9 @@ export function FilterBar() {
           <Chip key={s} label={s} onRemove={() => handleFilterChange('status', s)} />
         ))}
         {filters.member.map(id => {
-          const m = members.find(m => m.user.id === id);
-          return <Chip key={id} label={m?.user.username || id} onRemove={() => handleFilterChange('member', id)} />;
+          const m = members.find((m: any) => (m.id || m.user?.id) === id);
+          const memberName = m ? (m.full_name || m.user?.username || m.email?.split('@')[0] || id) : id;
+          return <Chip key={id} label={memberName} onRemove={() => handleFilterChange('member', id)} />;
         })}
       </div>
     </div>

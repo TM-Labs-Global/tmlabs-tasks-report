@@ -2,24 +2,24 @@
   /* === TM Labs Dark Mode — Always On === */
 
   /* Backgrounds */
-  --bg-primary: var(--color-slate-900);
-  --bg-secondary: var(--color-slate-800);
-  --bg-card: var(--color-slate-800);
-  --bg-elevated: #263347;
-  --bg-overlay: rgba(15, 23, 42, 0.85);
+  --bg-primary: var(--color-navy); /* #0F1B35 */
+  --bg-secondary: var(--color-navy-2); /* #1A2847 */
+  --bg-card: var(--color-surface-1); /* #1A2440 */
+  --bg-elevated: var(--color-surface-2); /* #202C4A */
+  --bg-overlay: rgba(15, 27, 53, 0.85);
 
   /* Text */
-  --text-primary: var(--color-slate-100);
-  --text-secondary: var(--color-slate-400);
-  --text-muted: var(--color-slate-600);
-  --text-accent: var(--color-brand-pink);
-  --text-inverse: var(--color-slate-900);
+  --text-primary: var(--color-text-primary); /* #F0F4FF */
+  --text-secondary: var(--color-text-secondary); /* #8A9CC8 */
+  --text-muted: var(--color-text-muted); /* #4A5A82 */
+  --text-accent: var(--color-pink); /* #FF3396 */
+  --text-inverse: var(--color-navy); /* #0F1B35 */
 
   /* Borders */
-  --border-default: #263347;
-  --border-subtle: var(--color-slate-800);
-  --border-strong: var(--color-slate-700);
-  --border-focus: var(--color-brand-pink);
+  --border-default: var(--color-border); /* rgba(255, 255, 255, 0.07) */
+  --border-subtle: rgba(255, 255, 255, 0.04);
+  --border-strong: var(--color-border-strong); /* rgba(255, 255, 255, 0.14) */
+  --border-focus: var(--color-pink);
 
   /* Status Colors */
   --status-complete: var(--color-status-complete);

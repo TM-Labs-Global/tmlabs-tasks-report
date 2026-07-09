@@ -41,7 +41,7 @@ export function useFilteredTasks() {
         const start = new Date(startStr).getTime();
         const end = new Date(endStr).getTime();
         
-        const taskDueDate = task.dueDate ? new Date(task.dueDate).getTime() : (task.due_date_raw ? new Date(task.due_date_raw).getTime() : null);
+        const taskDueDate = task.due_date_raw || (task.dueDate ? new Date(task.dueDate).getTime() : null);
         const taskClosedDate = task.date_closed ? parseInt(task.date_closed) : null;
         
         const dueInRange = taskDueDate && taskDueDate >= start && taskDueDate <= end;
@@ -57,9 +57,10 @@ export function useFilteredTasks() {
         const search = filters.search.toLowerCase();
         const matchesName = task.name.toLowerCase().includes(search);
         const matchesProject = task.project.toLowerCase().includes(search);
-        const matchesAssignee = task.assignee?.name?.toLowerCase().includes(search);
-        const matchesDesc = task.text_content?.toLowerCase().includes(search);
+        const matchesAssignee = task.assignee?.name?.toLowerCase()?.includes(search);
+        const matchesDesc = task.text_content?.toLowerCase()?.includes(search);
         if (!matchesName && !matchesProject && !matchesAssignee && !matchesDesc) {
+
           return false;
         }
       }

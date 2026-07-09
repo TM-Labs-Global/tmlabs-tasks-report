@@ -1,6 +1,3 @@
-import fs from "fs";
-import path from "path";
-
 export interface ColorToken {
   name: string;
   hex: string;

@@ -40,19 +40,23 @@ export default function TeamPerformance() {
     });
   };
 
-  // Group tasks by member
-  const memberStats = members.map(m => {
-    const user = m.user;
-    const memberTasks = tasks.filter(t => t.assignees?.some((a: any) => a.id === user.id));
+  // Group tasks by member — works with both Supabase profile shape and legacy ClickUp shape
+  const memberStats = members.map((m: any) => {
+    const memberId = m.id || m.user?.id;
+    const username = m.full_name || m.user?.username || m.email?.split('@')[0] || 'Unknown';
+    const profilePicture = m.avatar_url || m.user?.profilePicture || null;
+    const memberTasks = tasks.filter((t: any) => t.assignees?.some((a: any) => a.id === memberId));
     return {
-      user,
+      id: memberId,
+      username,
+      profilePicture,
       taskCount: memberTasks.length,
-      completed: memberTasks.filter(t => t.status.toLowerCase().includes('complete') || t.status.toLowerCase().includes('done') || t.status.toLowerCase().includes('closed')).length,
-      overdue: memberTasks.filter(t => t.flags.isOverdue).length,
+      completed: memberTasks.filter((t: any) => t.status.toLowerCase().includes('complete') || t.status.toLowerCase().includes('done') || t.status.toLowerCase().includes('closed')).length,
+      overdue: memberTasks.filter((t: any) => t.flags.isOverdue).length,
     };
   }).sort((a, b) => b.taskCount - a.taskCount);
 
-  const chartData = memberStats.map(s => ({ name: s.user.username, tasks: s.taskCount }));
+  const chartData = memberStats.map(s => ({ name: s.username, tasks: s.taskCount }));
 
   const handleExport = () => {
     const start = filters.startDate ? new Date(filters.startDate) : new Date();
@@ -92,26 +96,26 @@ export default function TeamPerformance() {
       {/* Member Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {memberStats.map(stat => {
-          const isActive = filters.member.includes(stat.user.id);
+          const isActive = filters.member.includes(stat.id);
           return (
             <div 
-              key={stat.user.id} 
-              onClick={() => handleMemberClick(stat.user.id)}
+              key={stat.id} 
+              onClick={() => handleMemberClick(stat.id)}
               className={`bg-card p-5 rounded-xl border transition-all cursor-pointer group ${isActive ? 'border-brand-pink ring-1 ring-brand-pink/20 bg-brand-pink/[0.02]' : 'border-slate-700/20 hover:border-brand-pink/30'}`}
             >
               <div className="flex items-center gap-3 mb-4">
-                {stat.user.profilePicture ? (
-                  <img src={stat.user.profilePicture} alt={stat.user.username} className="w-10 h-10 rounded-full border border-slate-700" />
+                {stat.profilePicture ? (
+                  <img src={stat.profilePicture} alt={stat.username} className="w-10 h-10 rounded-full border border-slate-700" />
                 ) : (
                   <div className="w-10 h-10 rounded-full bg-elevated flex items-center justify-center text-primary font-bold">
-                    {(stat.user.username || 'U').charAt(0)}
+                    {(stat.username || 'U').charAt(0)}
                   </div>
                 )}
                 <div>
                   <div className={`text-body font-semibold transition-colors ${isActive ? 'text-brand-pink' : 'text-primary group-hover:text-brand-pink'}`}>
-                    {stat.user.username || 'Unknown User'}
+                    {stat.username || 'Unknown User'}
                   </div>
-                  <div className="text-caption text-secondary">{stat.user.initials || 'Member'}</div>
+                  <div className="text-caption text-secondary">Team Member</div>
                 </div>
               </div>
               

@@ -1,51 +1,100 @@
 :root {
-  /* TM Labs Brand Primary Palette */
-  --color-brand-pink: #FF3396;
-  --color-brand-purple: #6633FF;
-  --color-brand-violet: #4F1275;
-  --color-brand-navy: #10024F;
+  /* TM Labs Design System v1.0 — Primitives */
+  --color-pink: #FF3396; /* usage: Neon Pink */
+  --color-purple: #6633FF; /* usage: Neon Purple */
+  --color-navy: #0F1B35; /* usage: Deep Navy */
+  --color-navy-2: #1A2847; /* usage: Navy 2 */
+  --color-mid: #1E2D50; /* usage: Mid Navy */
+  
+  --color-pink-dim: #CC2878;
+  --color-purple-dim: #5228CC;
 
-  /* Neutral Slate Palette for App Backgrounds / Text */
-  --color-slate-50: #F8FAFC;
-  --color-slate-100: #F1F5F9;
-  --color-slate-200: #E2E8F0;
-  --color-slate-300: #CBD5E1;
-  --color-slate-400: #94A3B8;
-  --color-slate-500: #64748B;
-  --color-slate-600: #475569;
-  --color-slate-700: #334155;
-  --color-slate-800: #1E293B;
-  --color-slate-900: #0F172A;
-  --color-slate-950: #020617;
+  --color-pink-soft: rgba(255, 51, 150, 0.12);
+  --color-purple-soft: rgba(102, 51, 255, 0.12);
+  
+  --color-pink-border: rgba(255, 51, 150, 0.3);
+  --color-purple-border: rgba(102, 51, 255, 0.3);
+
+  --color-text-primary: #F0F4FF;
+  --color-text-secondary: #8A9CC8;
+  --color-text-muted: #4A5A82;
+
+  --color-border: rgba(255, 255, 255, 0.07);
+  --color-border-strong: rgba(255, 255, 255, 0.14);
+
+  --color-surface-1: #1A2440;
+  --color-surface-2: #202C4A;
+  --color-surface-3: #243054;
+
+  /* Direct aliases for design mockup rendering */
+  --pink: var(--color-pink);
+  --purple: var(--color-purple);
+  --navy: var(--color-navy);
+  --navy-2: var(--color-navy-2);
+  --mid: var(--color-mid);
+  --pink-dim: var(--color-pink-dim);
+  --purple-dim: var(--color-purple-dim);
+  --pink-soft: var(--color-pink-soft);
+  --purple-soft: var(--color-purple-soft);
+  --pink-border: var(--color-pink-border);
+  --purple-border: var(--color-purple-border);
+  --text-primary: var(--color-text-primary);
+  --text-secondary: var(--color-text-secondary);
+  --text-muted: var(--color-text-muted);
+  --border: var(--color-border);
+  --border-strong: var(--color-border-strong);
+  --surface-1: var(--color-surface-1);
+  --surface-2: var(--color-surface-2);
+  --surface-3: var(--color-surface-3);
+
+  /* === Backwards Compatibility Mapping === */
+  /* TM Labs Brand Primary Palette */
+  --color-brand-pink: var(--color-pink);
+  --color-brand-purple: var(--color-purple);
+  --color-brand-violet: var(--color-purple-dim);
+  --color-brand-navy: var(--color-navy);
+
+  /* Neutral Slate Palette mapped to Deep Navy and Surface scales */
+  --color-slate-50: #F0F4FF;       /* Mapped to light text */
+  --color-slate-100: #E6ECFF;
+  --color-slate-200: #D2DCF5;
+  --color-slate-300: #B4C4E6;
+  --color-slate-400: var(--color-text-secondary); /* #8A9CC8 */
+  --color-slate-500: var(--color-text-muted);     /* #4A5A82 */
+  --color-slate-600: var(--color-surface-3);      /* #243054 */
+  --color-slate-700: var(--color-surface-2);      /* #202C4A */
+  --color-slate-800: var(--color-surface-1);      /* #1A2440 */
+  --color-slate-900: var(--color-navy-2);         /* #1A2847 */
+  --color-slate-950: var(--color-navy);           /* #0F1B35 */
 
   /* Semantic / Status Colors */
   --color-status-complete: #22C55E;
   --color-status-in-progress: #F59E0B;
   --color-status-blocked: #EF4444;
-  --color-status-todo: #94A3B8;
-  --color-status-review: #8B5CF6;
+  --color-status-todo: var(--color-text-muted);
+  --color-status-review: var(--color-purple);
 
   /* Priority Colors */
   --color-priority-urgent: #EF4444;
   --color-priority-high: #F97316;
-  --color-priority-normal: #3B82F6;
-  --color-priority-low: #94A3B8;
-  --color-priority-none: #475569;
+  --color-priority-normal: #6633FF;
+  --color-priority-low: var(--color-text-secondary);
+  --color-priority-none: var(--color-text-muted);
 
   /* KPI Card Accents */
-  --color-kpi-blue: #3B82F6;
+  --color-kpi-blue: #6633FF;
   --color-kpi-green: #22C55E;
-  --color-kpi-teal: #14B8A6;
+  --color-kpi-teal: #00F2FE;
   --color-kpi-amber: #F59E0B;
   --color-kpi-red: #EF4444;
-  --color-kpi-orange: #F97316;
-  --color-kpi-purple: #A855F7;
-  --color-kpi-indigo: #6366F1;
+  --color-kpi-orange: #FF3396;
+  --color-kpi-purple: #A07EFF;
+  --color-kpi-indigo: #4A5A82;
 
   /* App Level Interactive Accents */
-  --color-accent-primary: #6366F1;
-  --color-accent-hover: #4F46E5;
-  --color-accent-brand: #FF3396;
+  --color-accent-primary: var(--color-purple);
+  --color-accent-hover: var(--color-purple-dim);
+  --color-accent-brand: var(--color-pink);
 
   /* Base */
   --color-white: #ffffff;

@@ -1,27 +1,29 @@
 :root {
   /* Font Families */
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-display: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  --font-display: 'IBM Plex Sans', sans-serif;
+  --font-body: 'Geist', sans-serif;
+  --font-sans: var(--font-body);
+  --font-mono: monospace;
 
-  /* Font Sizes (TM Labs Scale) */
-  --text-caption: 0.6875rem; /* 11px */
-  --text-label: 0.75rem; /* 12px */
-  --text-body: 0.875rem; /* 14px */
-  --text-h3: 1rem; /* 16px */
-  --text-h2: 1.125rem; /* 18px */
-  --text-h1: 1.5rem; /* 24px */
-  --text-display: 2rem; /* 32px */
+  /* Font Sizes (TM Labs Design System v1.0) */
+  --text-caption: 0.75rem;     /* 12px */
+  --text-label: 0.6875rem;    /* 11px */
+  --text-body: 0.875rem;      /* 14px */
+  --text-body-lg: 1rem;       /* 16px */
+  --text-h3: 1.0625rem;       /* 17px */
+  --text-h2: 1.375rem;        /* 22px */
+  --text-h1: 1.875rem;        /* 30px */
+  --text-display: 2.75rem;    /* 44px */
 
-  /* Old scale kept for compatibility during migration if needed, but overridden */
-  --text-xs: var(--text-label);
+  /* Old scale kept for compatibility */
+  --text-xs: var(--text-caption);
   --text-sm: var(--text-body);
   --text-base: var(--text-body);
-  --text-lg: var(--text-h3);
-  --text-xl: var(--text-h2);
-  --text-2xl: var(--text-h1);
-  --text-3xl: var(--text-display);
-  --text-4xl: var(--text-display);
+  --text-lg: var(--text-body-lg);
+  --text-xl: var(--text-h3);
+  --text-2xl: var(--text-h2);
+  --text-3xl: var(--text-h1);
+  --text-4xl: var(--text-h1);
   --text-5xl: var(--text-display);
 
   /* Font Weights */
@@ -32,97 +34,131 @@
 
   /* Line Heights */
   --leading-none: 1;
-  --leading-tight: 1.25;
-  --leading-snug: 1.375;
-  --leading-normal: 1.5;
-  --leading-relaxed: 1.625;
-  --leading-loose: 2;
+  --leading-tight: 1.12;
+  --leading-snug: 1.2;
+  --leading-normal: 1.6;
+  --leading-relaxed: 1.6;
 }
 
 body {
   font-family: var(--font-sans);
-  color: var(--text-base);
+  color: var(--text-primary);
   line-height: var(--leading-normal);
   -webkit-font-smoothing: antialiased;
 }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
+h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);
-  font-weight: var(--weight-bold);
-  color: var(--text-base);
-  line-height: var(--leading-tight);
+  color: var(--text-primary);
 }
 
-h1 {
-  font-size: var(--text-5xl);
-}
-
-h2 {
-  font-size: var(--text-4xl);
-}
-
-h3 {
-  font-size: var(--text-3xl);
-}
-
-h4 {
-  font-size: var(--text-2xl);
-}
-
-h5 {
-  font-size: var(--text-xl);
-}
-
-h6 {
-  font-size: var(--text-lg);
-}
+h1 { font-size: var(--text-display); font-weight: var(--weight-bold); line-height: 1.07; letter-spacing: -0.03em; }
+h2 { font-size: var(--text-h1); font-weight: var(--weight-semibold); line-height: 1.12; letter-spacing: -0.02em; }
+h3 { font-size: var(--text-h2); font-weight: var(--weight-semibold); line-height: 1.2; letter-spacing: -0.01em; }
+h4 { font-size: var(--text-h3); font-weight: var(--weight-semibold); line-height: 1.3; }
 
 p {
-  margin-bottom: var(--spacing-4);
+  margin-bottom: var(--space-4);
   color: var(--text-secondary);
 }
 
-/* Utilities */
+/* Typography Utility Classes — TM Labs Design System v1.0 */
+.t-display {
+  font-family: var(--font-display);
+  font-size: var(--text-display);
+  font-weight: var(--weight-bold);
+  line-height: 1.07;
+  letter-spacing: -0.03em;
+}
 
-/* Size Variants */
-.text-caption { font-size: var(--text-caption); line-height: var(--leading-normal); }
-.text-label { font-size: var(--text-label); line-height: var(--leading-normal); }
-.text-body { font-size: var(--text-body); line-height: var(--leading-normal); }
-.text-h3 { font-size: var(--text-h3); line-height: var(--leading-snug); }
-.text-h2 { font-size: var(--text-h2); line-height: var(--leading-snug); }
-.text-h1 { font-size: var(--text-h1); line-height: var(--leading-tight); }
-.text-display { font-size: var(--text-display); line-height: var(--leading-tight); }
+.t-h1 {
+  font-family: var(--font-display);
+  font-size: var(--text-h1);
+  font-weight: var(--weight-semibold);
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+}
 
-/* Old Size Variants for compatibility */
-.text-xs { font-size: var(--text-xs); line-height: var(--leading-normal); }
-.text-sm { font-size: var(--text-sm); line-height: var(--leading-normal); }
-.text-base { font-size: var(--text-base); line-height: var(--leading-normal); }
-.text-lg { font-size: var(--text-lg); line-height: var(--leading-snug); }
-.text-xl { font-size: var(--text-xl); line-height: var(--leading-snug); }
-.text-2xl { font-size: var(--text-2xl); line-height: var(--leading-tight); }
-.text-3xl { font-size: var(--text-3xl); line-height: var(--leading-tight); }
-.text-4xl { font-size: var(--text-4xl); line-height: var(--leading-tight); }
-.text-5xl { font-size: var(--text-5xl); line-height: var(--leading-tight); }
+.t-h2 {
+  font-family: var(--font-display);
+  font-size: var(--text-h2);
+  font-weight: var(--weight-semibold);
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
 
-/* Weight Variants */
+.t-h3 {
+  font-family: var(--font-display);
+  font-size: var(--text-h3);
+  font-weight: var(--weight-semibold);
+  line-height: 1.3;
+}
+
+.t-body-lg {
+  font-family: var(--font-body);
+  font-size: var(--text-body-lg);
+  font-weight: var(--weight-regular);
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.t-body {
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  font-weight: var(--weight-regular);
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.t-caption {
+  font-family: var(--font-body);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-regular);
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.t-overline {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.t-code {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--color-pink);
+  background: var(--color-pink-soft);
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--color-pink-border);
+}
+
+/* Legacy Utility Classes mapping to new TM Labs system */
+.text-caption { font-size: var(--text-caption); line-height: 1.5; }
+.text-label { font-size: 11px; font-weight: var(--weight-semibold); letter-spacing: 0.1em; }
+.text-body { font-size: var(--text-body); line-height: 1.6; }
+.text-body-large { font-size: var(--text-body-lg); line-height: 1.6; }
+.text-h3 { font-size: var(--text-h3); line-height: 1.3; }
+.text-h2 { font-size: var(--text-h2); line-height: 1.2; }
+.text-h1 { font-size: var(--text-h1); line-height: 1.12; }
+.text-display { font-size: var(--text-display); line-height: 1.07; }
+
 .font-regular { font-weight: var(--weight-regular); }
 .font-medium { font-weight: var(--weight-medium); }
 .font-semibold { font-weight: var(--weight-semibold); }
 .font-bold { font-weight: var(--weight-bold); }
 
-/* Intent Variants (Colors) */
-.text-default { color: var(--text-base); }
+.text-default { color: var(--text-primary); }
 .text-primary { color: var(--text-primary); }
 .text-secondary { color: var(--text-secondary); }
-.text-muted { color: var(--text-tertiary); }
-.text-brand { color: var(--text-brand); }
-.text-error { color: var(--text-error); }
-.text-success { color: var(--text-success); }
-.text-warning { color: var(--text-warning); }
-.text-info { color: var(--text-info); }
-.text-inverse { color: var(--text-inverse); }
+.text-muted { color: var(--text-muted); }
+.text-brand { color: var(--color-pink); }
+.text-error { color: var(--color-priority-urgent); }
+.text-success { color: var(--color-status-complete); }
+.text-warning { color: var(--color-status-in-progress); }
+.text-info { color: var(--color-priority-normal); }
+.text-inverse { color: var(--color-navy); }

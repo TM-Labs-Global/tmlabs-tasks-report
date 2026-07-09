@@ -354,8 +354,8 @@ export function CalendarPicker({ onRangeSelect, currentStart, currentEnd, curren
 
             {/* Days Grid */}
             <div className="grid grid-cols-7 gap-y-1 mb-2 text-center font-medium">
-              {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => (
-                <div key={d} className="text-[10px] font-bold text-muted py-2">{d}</div>
+              {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, idx) => (
+                <div key={`${d}-${idx}`} className="text-[10px] font-bold text-muted py-2">{d}</div>
               ))}
               {days.map((day, idx) => {
                 const { isSelected, isStart, isEnd, isInRange } = checkDayState(day);

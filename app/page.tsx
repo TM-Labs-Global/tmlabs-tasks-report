@@ -145,13 +145,15 @@ export default function Home() {
   });
 
   // 4. Team Workload
-  const teamWorkloadData = members.map(m => {
-    const openTasks = tasks.filter(t => {
+  const teamWorkloadData = members.map((m: any) => {
+    const memberId = m.id || m.user?.id;
+    const memberName = m.full_name || m.user?.username || m.email?.split('@')[0] || 'Unknown';
+    const openTasks = tasks.filter((t: any) => {
       const isDone = t.status.toLowerCase().includes('complete') || t.status.toLowerCase().includes('done') || t.status.toLowerCase().includes('closed');
-      return !isDone && t.assignees?.some((a: any) => a.id === m.user.id);
+      return !isDone && t.assignees?.some((a: any) => a.id === memberId);
     }).length;
-    return { name: m.user.username, tasks: openTasks };
-  }).sort((a, b) => b.tasks - a.tasks).slice(0, 8);
+    return { name: memberName, tasks: openTasks };
+  }).sort((a: any, b: any) => b.tasks - a.tasks).slice(0, 8);
 
   // 5. Progress by Project
   const projectList = Array.from(new Set(tasks.map(t => t.project)));

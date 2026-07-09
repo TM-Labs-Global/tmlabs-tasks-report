@@ -34,8 +34,8 @@ export const Text = ({
     ...props
 }: TextProps) => {
     // Map variants to semantic HTML tags for SEO
-    const getTag = (v: TextVariant): React.ElementType => {
-        const headingMap: Record<string, React.ElementType> = {
+    const getTagName = (v: TextVariant): string => {
+        const headingMap: Record<string, string> = {
             h1: 'h1',
             h2: 'h2',
             h3: 'h3',
@@ -56,7 +56,7 @@ export const Text = ({
         return headingMap[v] || 'span';
     };
 
-    const Component = as || getTag(variant);
+    const Component = (as || getTagName(variant)) as React.ElementType;
 
     // Map internal variant names to CSS classes
     const getVariantClass = (v: TextVariant) => {
