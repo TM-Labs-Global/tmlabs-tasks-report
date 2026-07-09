@@ -1,8 +1,10 @@
+'use client';
 import React, { useState } from 'react';
 import { StatusBadge } from '../ui/StatusBadge';
 import { PriorityBadge } from '../ui/PriorityBadge';
-import { TaskDetailModal } from '../modals/TaskDetailModal';
 import { Ban, Timer, AlertTriangle } from 'lucide-react';
+import { Sheet } from '@/components/ui/sheet';
+import { TaskDetailPanel } from '@/features/tasks/TaskDetailPanel';
 
 interface Task {
   id: string;
@@ -31,12 +33,12 @@ interface TaskTableProps {
 }
 
 export function TaskTable({ tasks, onRowClick }: TaskTableProps) {
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 25;
 
   const handleRowClick = (task: Task) => {
-    setSelectedTask(task);
+    setSelectedTaskId(task.id);
     onRowClick?.(task);
   };
 
@@ -157,12 +159,15 @@ export function TaskTable({ tasks, onRowClick }: TaskTableProps) {
         )}
       </div>
 
-      <TaskDetailModal 
-        isOpen={!!selectedTask} 
-        onClose={() => setSelectedTask(null)}
-        task={selectedTask}
-      />
+      {/* Task Detail Side Panel — replaces the old ClickUp modal */}
+      <Sheet open={!!selectedTaskId} onOpenChange={(open) => { if (!open) setSelectedTaskId(null); }}>
+        {selectedTaskId && (
+          <TaskDetailPanel
+            taskId={selectedTaskId}
+            onClose={() => setSelectedTaskId(null)}
+          />
+        )}
+      </Sheet>
     </>
   );
 }
-

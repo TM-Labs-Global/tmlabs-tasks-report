@@ -1,8 +1,10 @@
+'use client';
 import React, { useState, useMemo } from 'react';
 import { Modal } from '../ui/Modal';
 import { StatusBadge } from '../ui/StatusBadge';
 import { PriorityBadge } from '../ui/PriorityBadge';
-import { TaskDetailModal } from './TaskDetailModal';
+import { Sheet } from '@/components/ui/sheet';
+import { TaskDetailPanel } from '@/features/tasks/TaskDetailPanel';
 import { Calendar, User, Search, Folder, ClipboardList } from 'lucide-react';
 
 interface Task {
@@ -34,7 +36,7 @@ interface MetricTasksModalProps {
 }
 
 export function MetricTasksModal({ isOpen, onClose, title, tasks }: MetricTasksModalProps) {
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredTasks = useMemo(() => {
@@ -95,7 +97,7 @@ export function MetricTasksModal({ isOpen, onClose, title, tasks }: MetricTasksM
                   filteredTasks.map((task) => (
                     <tr
                       key={task.id}
-                      onClick={() => setSelectedTask(task)}
+                      onClick={() => setSelectedTaskId(task.id)}
                       className="hover:bg-slate-700/10 cursor-pointer transition-colors duration-150 group"
                     >
                       <td className="px-5 py-4">
@@ -178,14 +180,15 @@ export function MetricTasksModal({ isOpen, onClose, title, tasks }: MetricTasksM
         </div>
       </Modal>
 
-      {/* Embedded Secondary TaskDetailModal */}
-      {selectedTask && (
-        <TaskDetailModal
-          isOpen={!!selectedTask}
-          onClose={() => setSelectedTask(null)}
-          task={selectedTask}
-        />
-      )}
+      {/* Task Detail Side Panel */}
+      <Sheet open={!!selectedTaskId} onOpenChange={(open) => { if (!open) setSelectedTaskId(null); }}>
+        {selectedTaskId && (
+          <TaskDetailPanel
+            taskId={selectedTaskId}
+            onClose={() => setSelectedTaskId(null)}
+          />
+        )}
+      </Sheet>
     </>
   );
 }

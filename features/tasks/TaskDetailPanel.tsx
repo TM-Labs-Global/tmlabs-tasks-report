@@ -77,7 +77,7 @@ export function TaskDetailPanel({
 
   if (loading) {
     return (
-      <SheetContent className="bg-card border-l border-slate-700/20 w-full sm:max-w-2xl p-6 text-primary flex items-center justify-center">
+      <SheetContent showCloseButton={false} className="bg-card border-l border-slate-700/20 w-full sm:max-w-2xl p-6 text-primary flex items-center justify-center">
         <div className="animate-pulse space-y-4 w-full">
           <div className="h-6 bg-elevated rounded w-3/4"></div>
           <div className="h-4 bg-elevated rounded w-1/2"></div>
@@ -90,7 +90,7 @@ export function TaskDetailPanel({
 
   if (!task) {
     return (
-      <SheetContent className="bg-card border-l border-slate-700/20 w-full sm:max-w-2xl p-6 text-primary flex items-center justify-center">
+      <SheetContent showCloseButton={false} className="bg-card border-l border-slate-700/20 w-full sm:max-w-2xl p-6 text-primary flex items-center justify-center">
         <div className="text-center space-y-2">
           <AlertTriangle className="mx-auto text-brand-pink w-10 h-10" />
           <h3 className="font-bold text-lg">Task Not Found</h3>
@@ -183,7 +183,7 @@ export function TaskDetailPanel({
   };
 
   return (
-    <SheetContent className="bg-card border-l border-slate-700/20 w-full sm:max-w-2xl p-0 text-primary flex flex-col h-full shadow-2xl">
+    <SheetContent showCloseButton={false} className="bg-card border-l border-slate-700/20 w-full sm:max-w-2xl p-0 text-primary flex flex-col h-full shadow-2xl">
       {/* Top action header */}
       <div className="p-4 border-b border-slate-700/20 flex items-center justify-between bg-elevated/20">
         <span className="text-caption font-bold text-muted uppercase tracking-wider">
