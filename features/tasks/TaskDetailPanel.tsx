@@ -113,13 +113,19 @@ export function TaskDetailPanel({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(fields),
       });
-      if (res.ok) {
-        fetchTaskDetails();
-        if (onRefresh) onRefresh();
-        refreshData();
+      if (!res.ok) {
+        const error = await res.json();
+        console.error('Task update failed:', error);
+        alert(`Error updating task: ${error.error || 'Unknown error'}`);
+        return;
       }
+      const updatedTask = await res.json();
+      setTask(updatedTask);
+      if (onRefresh) onRefresh();
+      refreshData();
     } catch (err) {
-      console.error(err);
+      console.error('Error updating task:', err);
+      alert('Failed to update task. Please try again.');
     }
   };
 
@@ -212,7 +218,7 @@ export function TaskDetailPanel({
           </div>
 
           {/* Core Properties Grid */}
-          <div className="grid grid-cols-2 gap-4 bg-elevated/10 p-4 border border-slate-700/10 rounded-2xl">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-elevated/10 p-4 border border-slate-700/10 rounded-2xl">
             {/* Status Field */}
             <div className="space-y-1.5">
               <label className="text-caption font-bold text-secondary uppercase tracking-wide">Status</label>

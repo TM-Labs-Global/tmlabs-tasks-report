@@ -117,8 +117,11 @@ export default function LoginPage() {
         setTimeout(() => otpRefs.current[0]?.focus(), 50);
         return;
       }
-      // Success — hard redirect to dashboard
-      window.location.href = '/';
+      // Success — check if this is an invited user and route to workspace
+      const searchParams = new URLSearchParams(window.location.search);
+      const isInvited = searchParams.get('invited') === 'true';
+      const redirectUrl = isInvited ? '/workspace' : '/';
+      window.location.href = redirectUrl;
     } catch {
       setError('Network error. Please try again.');
     } finally {

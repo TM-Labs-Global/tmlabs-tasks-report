@@ -48,73 +48,73 @@ export function TaskTable({ tasks, onRowClick }: TaskTableProps) {
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-6 mb-4 px-2 py-3 bg-secondary/20 rounded-xl border border-slate-700/10">
-        <div className="text-label font-bold text-muted uppercase tracking-widest mr-2">Legend:</div>
-        <div className="flex items-center gap-2">
-          <Ban size={14} className="text-status-blocked" />
-          <span className="text-caption text-secondary">Blocked / Delayed</span>
+      <div className="flex flex-wrap items-center gap-2 sm:gap-6 mb-4 px-2 sm:px-4 py-2 sm:py-3 bg-secondary/20 rounded-xl border border-slate-700/10">
+        <div className="text-xs sm:text-label font-bold text-muted uppercase tracking-widest mr-0 sm:mr-2">Legend:</div>
+        <div className="flex items-center gap-1 sm:gap-2">
+          <Ban size={12} className="sm:w-3.5 sm:h-3.5 text-status-blocked" />
+          <span className="text-[10px] sm:text-caption text-secondary">Blocked</span>
         </div>
-        <div className="flex items-center gap-2">
-          <Timer size={14} className="text-priority-high" />
-          <span className="text-caption text-secondary">Spillover (Carried over)</span>
+        <div className="flex items-center gap-1 sm:gap-2">
+          <Timer size={12} className="sm:w-3.5 sm:h-3.5 text-priority-high" />
+          <span className="text-[10px] sm:text-caption text-secondary">Spillover</span>
         </div>
-        <div className="flex items-center gap-2">
-          <AlertTriangle size={14} className="text-priority-urgent" />
-          <span className="text-caption text-secondary">Overdue</span>
+        <div className="flex items-center gap-1 sm:gap-2">
+          <AlertTriangle size={12} className="sm:w-3.5 sm:h-3.5 text-priority-urgent" />
+          <span className="text-[10px] sm:text-caption text-secondary">Overdue</span>
         </div>
       </div>
 
       <div className="w-full overflow-hidden rounded-xl border border-slate-700/20 bg-card shadow-lg shadow-slate-950/20">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead className="bg-secondary border-b border-slate-700/20">
+          <table className="w-full text-left border-collapse min-w-max md:min-w-full">
+            <thead className="bg-secondary border-b border-slate-700/20 sticky top-0">
               <tr>
-                <th className="px-6 py-4 text-label font-bold text-muted uppercase tracking-widest">Task Title</th>
-                <th className="px-6 py-4 text-label font-bold text-muted uppercase tracking-widest">Project</th>
-                <th className="px-6 py-4 text-label font-bold text-muted uppercase tracking-widest">Assignee</th>
-                <th className="px-6 py-4 text-label font-bold text-muted uppercase tracking-widest">Priority</th>
-                <th className="px-6 py-4 text-label font-bold text-muted uppercase tracking-widest">Due Date</th>
-                <th className="px-6 py-4 text-label font-bold text-muted uppercase tracking-widest">Status</th>
-                <th className="px-6 py-4 text-label font-bold text-muted uppercase tracking-widest text-center">Flags</th>
+                <th className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-label font-bold text-muted uppercase tracking-widest whitespace-nowrap">Task Title</th>
+                <th className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-label font-bold text-muted uppercase tracking-widest whitespace-nowrap">Project</th>
+                <th className="hidden sm:table-cell px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-label font-bold text-muted uppercase tracking-widest whitespace-nowrap">Assignee</th>
+                <th className="hidden md:table-cell px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-label font-bold text-muted uppercase tracking-widest whitespace-nowrap">Priority</th>
+                <th className="hidden lg:table-cell px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-label font-bold text-muted uppercase tracking-widest whitespace-nowrap">Due Date</th>
+                <th className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-label font-bold text-muted uppercase tracking-widest whitespace-nowrap">Status</th>
+                <th className="px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-label font-bold text-muted uppercase tracking-widest text-center whitespace-nowrap">Flags</th>
               </tr>
             </thead>
 
             <tbody className="divide-y divide-slate-700/10">
               {paginatedTasks.map((task) => (
-                <tr 
+                <tr
                   key={task.id}
                   onClick={() => handleRowClick(task)}
-                  className="hover:bg-elevated cursor-pointer transition-colors duration-150 h-12"
+                  className="hover:bg-elevated cursor-pointer transition-colors duration-150 h-auto md:h-12"
                 >
-                  <td className="px-6 py-3 text-body font-medium text-primary max-w-md truncate">{task.name}</td>
-                  <td className="px-6 py-3 text-body text-secondary">{task.project}</td>
-                  <td className="px-6 py-3 text-body text-secondary">
+                  <td className="px-3 sm:px-6 py-2 sm:py-3 text-xs sm:text-body font-medium text-primary truncate max-w-[120px] sm:max-w-md">{task.name}</td>
+                  <td className="px-3 sm:px-6 py-2 sm:py-3 text-xs sm:text-body text-secondary truncate max-w-[80px] sm:max-w-none">{task.project}</td>
+                  <td className="hidden sm:table-cell px-3 sm:px-6 py-2 sm:py-3 text-xs sm:text-body text-secondary truncate">
                     {task.assignee?.name || 'Unassigned'}
                   </td>
-                  <td className="px-6 py-3">
+                  <td className="hidden md:table-cell px-3 sm:px-6 py-2 sm:py-3">
                     <PriorityBadge priority={task.priority} />
                   </td>
-                  <td className={`px-6 py-3 text-body ${task.flags.isOverdue ? 'text-red-500 font-semibold' : 'text-secondary'}`}>
+                  <td className={`hidden lg:table-cell px-3 sm:px-6 py-2 sm:py-3 text-xs sm:text-body ${task.flags.isOverdue ? 'text-red-500 font-semibold' : 'text-secondary'}`}>
                     {task.dueDate || '—'}
                   </td>
-                  <td className="px-6 py-3">
+                  <td className="px-3 sm:px-6 py-2 sm:py-3">
                     <StatusBadge status={task.status} />
                   </td>
-                  <td className="px-6 py-3 text-center">
-                    <div className="flex items-center justify-center gap-2">
+                  <td className="px-3 sm:px-6 py-2 sm:py-3 text-center">
+                    <div className="flex items-center justify-center gap-1 sm:gap-2">
                       {task.flags.isBlocked && (
                         <div title="Blocked">
-                          <Ban size={16} className="text-status-blocked" />
+                          <Ban size={14} className="sm:w-4 sm:h-4 text-status-blocked" />
                         </div>
                       )}
                       {task.flags.isSpillover && (
                         <div title="Spillover">
-                          <Timer size={16} className="text-priority-high" />
+                          <Timer size={14} className="sm:w-4 sm:h-4 text-priority-high" />
                         </div>
                       )}
                       {task.flags.isOverdue && (
                         <div title="Overdue">
-                          <AlertTriangle size={16} className="text-priority-urgent" />
+                          <AlertTriangle size={14} className="sm:w-4 sm:h-4 text-priority-urgent" />
                         </div>
                       )}
                     </div>
@@ -135,22 +135,25 @@ export function TaskTable({ tasks, onRowClick }: TaskTableProps) {
 
         {/* Pagination Controls */}
         {totalPages > 1 && (
-          <div className="px-6 py-3 border-t border-slate-700/20 flex items-center justify-between bg-secondary/30">
-            <div className="text-caption text-secondary">
+          <div className="px-3 sm:px-6 py-2 sm:py-3 border-t border-slate-700/20 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0 bg-secondary/30">
+            <div className="text-xs sm:text-caption text-secondary text-center sm:text-left">
               Showing <span className="text-primary font-medium">{((currentPage - 1) * pageSize) + 1}</span> to <span className="text-primary font-medium">{Math.min(currentPage * pageSize, tasks.length)}</span> of <span className="text-primary font-medium">{tasks.length}</span> tasks
             </div>
             <div className="flex gap-2">
-              <button 
+              <button
                 onClick={(e) => { e.stopPropagation(); setCurrentPage(p => Math.max(1, p - 1)); }}
                 disabled={currentPage === 1}
-                className="px-3 py-1 rounded bg-elevated border border-slate-700/30 text-caption text-primary disabled:opacity-50 hover:bg-slate-700/40 transition-colors"
+                className="px-2 sm:px-3 py-1 rounded text-xs sm:text-caption bg-elevated border border-slate-700/30 text-primary disabled:opacity-50 hover:bg-slate-700/40 transition-colors"
               >
                 Previous
               </button>
-              <button 
+              <span className="text-xs sm:text-caption text-secondary px-2 py-1">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
                 onClick={(e) => { e.stopPropagation(); setCurrentPage(p => Math.min(totalPages, p + 1)); }}
                 disabled={currentPage === totalPages}
-                className="px-3 py-1 rounded bg-elevated border border-slate-700/30 text-caption text-primary disabled:opacity-50 hover:bg-slate-700/40 transition-colors"
+                className="px-2 sm:px-3 py-1 rounded text-xs sm:text-caption bg-elevated border border-slate-700/30 text-primary disabled:opacity-50 hover:bg-slate-700/40 transition-colors"
               >
                 Next
               </button>

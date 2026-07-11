@@ -37,11 +37,12 @@ export default function MembersPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [inviteOpen, setInviteOpen] = useState(false);
-  
+
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteName, setInviteName] = useState('');
   const [inviteRole, setInviteRole] = useState('staff');
   const [inviting, setInviting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   const fetchMembers = async () => {
     try {
@@ -93,12 +94,13 @@ export default function MembersPage() {
         setInviteEmail('');
         setInviteName('');
         setInviteRole('staff');
+        setErrorMsg('');
         setInviteOpen(false);
         fetchMembers();
         refreshData();
       } else {
         const err = await res.json();
-        alert(err.error || 'Failed to invite user');
+        setErrorMsg(err.error || 'Failed to invite user');
       }
     } catch (err) {
       console.error(err);
@@ -161,7 +163,7 @@ export default function MembersPage() {
           </p>
         </div>
 
-        <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+        <Dialog open={inviteOpen} onOpenChange={(open) => { setInviteOpen(open); if (!open) setErrorMsg(''); }}>
           <DialogTrigger asChild>
             <Button className="bg-brand-pink hover:bg-brand-pink/90 text-white rounded-xl shadow-lg shadow-brand-pink/20 gap-2 cursor-pointer font-bold">
               <UserPlus size={16} /> Invite Member
@@ -172,6 +174,11 @@ export default function MembersPage() {
               <DialogTitle className="text-lg font-bold text-primary">Invite Team Member</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleInviteSubmit} className="space-y-4 pt-2">
+              {errorMsg && (
+                <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-400">
+                  {errorMsg}
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label htmlFor="inviteEmail" className="text-caption text-secondary font-semibold">Email Address</Label>
                 <Input 

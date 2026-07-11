@@ -5,17 +5,33 @@ import { useClickUp } from '@/shared/context/ClickUpContext';
 import { useFilteredTasks } from '@/shared/hooks/useFilteredTasks';
 import { MetricCard } from '@/shared/components/cards/MetricCard';
 import { TaskTable } from '@/shared/components/tables/TaskTable';
-import { 
-  Users, 
+import {
+  Users,
   Loader2,
-  FileSpreadsheet
+  FileSpreadsheet,
+  XCircle
 } from 'lucide-react';
 import { SetupScreen } from '@/shared/components/ui/SetupScreen';
 import { useFilters } from '@/shared/context/FilterContext';
 import { TeamWorkloadChart } from '@/shared/components/charts/TeamWorkloadChart';
 import { generateStyledReport } from '@/shared/utils/excelReport';
+import { useAuth } from '@/shared/context/AuthContext';
 
 export default function TeamPerformance() {
+  const { user } = useAuth();
+  const role = user?.role || 'staff';
+
+  // Only Product Managers can access team performance
+  if (role !== 'product_manager') {
+    return (
+      <div className="p-8 text-center max-w-md mx-auto space-y-4">
+        <XCircle className="mx-auto text-brand-pink w-12 h-12" />
+        <h3 className="text-h3 font-bold text-primary">Access Restricted</h3>
+        <p className="text-body text-secondary">Only Product Managers can access Team Performance. Please navigate to an allowed section.</p>
+      </div>
+    );
+  }
+
   const { members, isLoading, error, isConfigured } = useClickUp();
   const tasks = useFilteredTasks();
   const { filters, setFilters } = useFilters();

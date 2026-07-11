@@ -3,18 +3,19 @@
 import React, { useState } from 'react';
 import { useWorkspace } from '@/shared/context/WorkspaceContext';
 import { useAuth } from '@/shared/context/AuthContext';
-import { 
-  Folder, 
-  ListTodo, 
-  Plus, 
-  ChevronRight, 
+import {
+  Folder,
+  ListTodo,
+  Plus,
+  ChevronRight,
   ChevronDown,
   Settings2,
   FolderOpen,
   Calendar,
   Layers,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
@@ -26,13 +27,24 @@ import Link from 'next/link';
 export default function WorkspacePage() {
   const { spaces, tasks, refreshData } = useWorkspace();
   const { user } = useAuth();
+  const role = user?.role || 'staff';
+
+  // Only Product Managers can access workspace management
+  if (role !== 'product_manager') {
+    return (
+      <div className="p-8 text-center max-w-md mx-auto space-y-4">
+        <AlertCircle className="mx-auto text-brand-pink w-12 h-12" />
+        <h3 className="text-h3 font-bold text-primary">Access Restricted</h3>
+        <p className="text-body text-secondary">Only Product Managers can access Workspace management. Please navigate to an allowed section.</p>
+      </div>
+    );
+  }
+
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newSpaceName, setNewSpaceName] = useState('');
   const [newSpaceColor, setNewSpaceColor] = useState('#FF3396');
   const [newSpaceIcon, setNewSpaceIcon] = useState('📁');
   const [expandedSpaces, setExpandedSpaces] = useState<Record<string, boolean>>({});
-
-  const role = user?.role || 'staff';
 
   const toggleSpace = (id: string) => {
     setExpandedSpaces(prev => ({ ...prev, [id]: !prev[id] }));

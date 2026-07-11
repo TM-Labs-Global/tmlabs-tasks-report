@@ -35,30 +35,27 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean, onClose?: () =>
   const getNavItems = () => {
     const items: { name: string; href: string; icon: any }[] = [];
 
-    // Overview/Reporting sections
-    if (role === 'product_manager' || role === 'stakeholder') {
-      items.push({ name: 'Overview', href: '/', icon: LayoutDashboard });
+    if (role === 'stakeholder') {
+      // Stakeholders ONLY see Reporting Center
       items.push({ name: 'Reporting Center', href: '/reporting', icon: ClipboardList });
-    }
-    if (role === 'product_manager') {
+    } else if (role === 'staff') {
+      // Staff see: Dashboard, My Tasks, Calendar, Reporting (read-only), Settings
+      items.push({ name: 'Dashboard', href: '/', icon: LayoutDashboard });
+      items.push({ name: 'My Tasks', href: '/mytasks', icon: CheckSquare });
+      items.push({ name: 'Reporting Center', href: '/reporting', icon: ClipboardList });
+      items.push({ name: 'Calendar', href: '/calendar', icon: Calendar });
+    } else if (role === 'product_manager') {
+      // PMs see EVERYTHING
+      items.push({ name: 'Dashboard', href: '/', icon: LayoutDashboard });
+      items.push({ name: 'Reporting Center', href: '/reporting', icon: ClipboardList });
       items.push({ name: 'Team Performance', href: '/team', icon: Users });
       items.push({ name: 'Project Health', href: '/projects', icon: FolderKanban });
-    }
-
-    // New Workspace/Platform sections
-    if (role === 'product_manager' || role === 'staff') {
       items.push({ name: 'My Tasks', href: '/mytasks', icon: CheckSquare });
-    }
-    if (role === 'product_manager') {
-      items.push({ name: 'Projects & Tasks', href: '/workspace', icon: FolderOpen });
-    }
-    if (role === 'product_manager' || role === 'staff') {
+      items.push({ name: 'Workspace', href: '/workspace', icon: FolderOpen });
       items.push({ name: 'Calendar', href: '/calendar', icon: Calendar });
-    }
-    if (role === 'product_manager') {
       items.push({ name: 'Team Members', href: '/members', icon: Users });
     }
-    
+
     // Settings visible to all
     items.push({ name: 'Settings', href: '/settings', icon: Settings });
 

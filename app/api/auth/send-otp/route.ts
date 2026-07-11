@@ -13,7 +13,7 @@ function validateEmail(email: string): boolean {
 export async function POST(request: Request) {
   try {
     const { email } = await request.json();
-
+console.log('Received email for OTP:', email);
     if (!email) {
       return NextResponse.json({ error: 'Email address is required' }, { status: 400 });
     }

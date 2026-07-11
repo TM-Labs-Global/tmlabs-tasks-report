@@ -3,19 +3,36 @@
 import React from 'react';
 import { useClickUp } from '@/shared/context/ClickUpContext';
 import { useFilteredTasks } from '@/shared/hooks/useFilteredTasks';
-import { 
-  FolderKanban, 
+import {
+  FolderKanban,
   Loader2,
   ArrowLeft,
-  FileSpreadsheet
+  FileSpreadsheet,
+  AlertCircle,
+  XCircle
 } from 'lucide-react';
 import { SetupScreen } from '@/shared/components/ui/SetupScreen';
 import { useFilters } from '@/shared/context/FilterContext';
 import { TaskTable } from '@/shared/components/tables/TaskTable';
 import { ProjectDetail } from '@/shared/components/projects/ProjectDetail';
 import { generateStyledReport } from '@/shared/utils/excelReport';
+import { useAuth } from '@/shared/context/AuthContext';
 
 export default function ProjectHealth() {
+  const { user } = useAuth();
+  const role = user?.role || 'staff';
+
+  // Only Product Managers can access project health
+  if (role !== 'product_manager') {
+    return (
+      <div className="p-8 text-center max-w-md mx-auto space-y-4">
+        <XCircle className="mx-auto text-brand-pink w-12 h-12" />
+        <h3 className="text-h3 font-bold text-primary">Access Restricted</h3>
+        <p className="text-body text-secondary">Only Product Managers can access Project Health. Please navigate to an allowed section.</p>
+      </div>
+    );
+  }
+
   const { isLoading, error, isConfigured } = useClickUp();
   const tasks = useFilteredTasks();
   const { filters, setFilters, resetFilters } = useFilters();
