@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
-import { RefreshCw, Moon, Circle, Loader2, X, Menu } from 'lucide-react';
+import { RefreshCw, Moon, Sun, Circle, Loader2, X, Menu } from 'lucide-react';
 import { useClickUp } from '@/shared/context/ClickUpContext';
 import { useFilters } from '@/shared/context/FilterContext';
 
@@ -11,13 +11,36 @@ import { NotificationBell } from '@/features/notifications/NotificationBell';
 export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   const pathname = usePathname();
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [isDarkMode, setIsDarkMode] = useState(true);
 
   useEffect(() => {
     fetch('/api/auth/me')
       .then(res => res.json())
       .then(data => { if (data.authenticated) setUserEmail(data.email); })
       .catch(() => {});
+
+    // Initialize theme from localStorage or system preference
+    const savedTheme = localStorage.getItem('theme-mode');
+    const prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
+    const isDark = savedTheme ? savedTheme === 'dark' : !prefersLight;
+    setIsDarkMode(isDark);
+    applyTheme(isDark);
   }, []);
+
+  const applyTheme = (isDark: boolean) => {
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  };
+
+  const toggleTheme = () => {
+    const newIsDark = !isDarkMode;
+    setIsDarkMode(newIsDark);
+    localStorage.setItem('theme-mode', newIsDark ? 'dark' : 'light');
+    applyTheme(newIsDark);
+  };
 
   const { isLoading, isConfigured, refreshData } = useClickUp();
   const { isFiltered, resetFilters } = useFilters();
@@ -106,8 +129,12 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
 
         <NotificationBell />
 
-        <button className="p-2 rounded-lg text-secondary hover:bg-elevated hover:text-primary transition-colors">
-          <Moon size={20} />
+        <button
+          onClick={toggleTheme}
+          className="p-2 rounded-lg text-secondary hover:bg-elevated hover:text-primary transition-colors"
+          title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
+          {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
         </button>
       </div>
     </header>

@@ -15,7 +15,8 @@ import {
   Layers,
   Sparkles,
   ArrowRight,
-  AlertCircle
+  AlertCircle,
+  FolderPlus
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
@@ -40,10 +41,17 @@ export default function WorkspacePage() {
     );
   }
 
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isCreateSpaceOpen, setIsCreateSpaceOpen] = useState(false);
+  const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
+  const [selectedSpaceForFolder, setSelectedSpaceForFolder] = useState<string | null>(null);
+
   const [newSpaceName, setNewSpaceName] = useState('');
   const [newSpaceColor, setNewSpaceColor] = useState('#FF3396');
   const [newSpaceIcon, setNewSpaceIcon] = useState('📁');
+
+  const [newFolderName, setNewFolderName] = useState('');
+  const [newFolderColor, setNewFolderColor] = useState('#6633FF');
+
   const [expandedSpaces, setExpandedSpaces] = useState<Record<string, boolean>>({});
 
   const toggleSpace = (id: string) => {
@@ -67,11 +75,44 @@ export default function WorkspacePage() {
 
       if (res.ok) {
         setNewSpaceName('');
-        setIsCreateOpen(false);
+        setNewSpaceColor('#FF3396');
+        setNewSpaceIcon('📁');
+        setIsCreateSpaceOpen(false);
         refreshData();
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleCreateFolder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newFolderName || !selectedSpaceForFolder) return;
+
+    try {
+      const res = await fetch('/api/workspace/folders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          space_id: selectedSpaceForFolder,
+          name: newFolderName,
+          color: newFolderColor
+        }),
+      });
+
+      if (res.ok) {
+        setNewFolderName('');
+        setNewFolderColor('#6633FF');
+        setIsCreateFolderOpen(false);
+        setSelectedSpaceForFolder(null);
+        refreshData();
+      } else {
+        const error = await res.json();
+        alert(`Error creating folder: ${error.error}`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Failed to create folder');
     }
   };
 
@@ -100,17 +141,18 @@ export default function WorkspacePage() {
         </div>
 
         {role === 'product_manager' && (
-          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-brand-pink hover:bg-brand-pink/90 text-white rounded-xl shadow-lg shadow-brand-pink/20 gap-2 cursor-pointer font-bold">
-                <Plus size={16} /> New Space
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="bg-card border border-slate-700/30 text-primary rounded-2xl">
-              <DialogHeader>
-                <DialogTitle className="text-lg font-bold text-primary">Create Workspace Space</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleCreateSpace} className="space-y-4 pt-2">
+          <div className="flex gap-2">
+            <Dialog open={isCreateSpaceOpen} onOpenChange={setIsCreateSpaceOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-brand-pink hover:bg-brand-pink/90 text-white rounded-xl shadow-lg shadow-brand-pink/20 gap-2 cursor-pointer font-bold">
+                  <Plus size={16} /> New Space
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="bg-card border border-slate-700/30 text-primary rounded-2xl">
+                <DialogHeader>
+                  <DialogTitle className="text-lg font-bold text-primary">Create Workspace Space</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleCreateSpace} className="space-y-4 pt-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="spaceName" className="text-caption text-secondary font-semibold">Space Name</Label>
                   <Input 
@@ -150,17 +192,92 @@ export default function WorkspacePage() {
                     </div>
                   </div>
                 </div>
-                <DialogFooter className="pt-4">
-                  <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)} className="rounded-xl border-slate-700/50 text-secondary hover:bg-elevated hover:text-primary cursor-pointer">
-                    Cancel
-                  </Button>
-                  <Button type="submit" className="bg-brand-pink hover:bg-brand-pink/90 text-white rounded-xl cursor-pointer font-bold">
-                    Create Space
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+                  <DialogFooter className="pt-4">
+                    <Button type="button" variant="outline" onClick={() => setIsCreateSpaceOpen(false)} className="rounded-xl border-slate-700/50 text-secondary hover:bg-elevated hover:text-primary cursor-pointer">
+                      Cancel
+                    </Button>
+                    <Button type="submit" className="bg-brand-pink hover:bg-brand-pink/90 text-white rounded-xl cursor-pointer font-bold">
+                      Create Space
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={isCreateFolderOpen} onOpenChange={setIsCreateFolderOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-brand-purple hover:bg-brand-purple/90 text-white rounded-xl shadow-lg shadow-brand-purple/20 gap-2 cursor-pointer font-bold">
+                  <FolderPlus size={16} /> New Folder
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="bg-card border border-slate-700/30 text-primary rounded-2xl">
+                <DialogHeader>
+                  <DialogTitle className="text-lg font-bold text-primary">Create Folder</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 pt-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="spaceSelect" className="text-caption text-secondary font-semibold">Select Space</Label>
+                    <select
+                      id="spaceSelect"
+                      value={selectedSpaceForFolder || ''}
+                      onChange={e => setSelectedSpaceForFolder(e.target.value)}
+                      className="w-full px-3 py-2 bg-secondary border border-slate-700/50 text-primary rounded-xl focus:border-brand-pink focus:ring-1 focus:ring-brand-pink/20"
+                      required
+                    >
+                      <option value="">-- Choose a space --</option>
+                      {spaces.map(space => (
+                        <option key={space.id} value={space.id}>{space.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <form onSubmit={handleCreateFolder} className="space-y-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="folderName" className="text-caption text-secondary font-semibold">Folder Name</Label>
+                      <Input
+                        id="folderName"
+                        placeholder="e.g. Frontend Tasks"
+                        value={newFolderName}
+                        onChange={e => setNewFolderName(e.target.value)}
+                        className="bg-secondary border-slate-700/50 text-primary rounded-xl focus:border-brand-pink focus:ring-1 focus:ring-brand-pink/20"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="folderColor" className="text-caption text-secondary font-semibold">Color</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="folderColor"
+                          type="color"
+                          value={newFolderColor}
+                          onChange={e => setNewFolderColor(e.target.value)}
+                          className="w-12 h-10 p-0.5 bg-secondary border-slate-700/50 rounded-xl cursor-pointer"
+                        />
+                        <Input
+                          value={newFolderColor}
+                          onChange={e => setNewFolderColor(e.target.value)}
+                          className="bg-secondary border-slate-700/50 text-primary rounded-xl focus:border-brand-pink focus:ring-1 focus:ring-brand-pink/20 flex-1"
+                        />
+                      </div>
+                    </div>
+
+                    <DialogFooter className="pt-4">
+                      <Button type="button" variant="outline" onClick={() => {
+                        setIsCreateFolderOpen(false);
+                        setSelectedSpaceForFolder(null);
+                      }} className="rounded-xl border-slate-700/50 text-secondary hover:bg-elevated hover:text-primary cursor-pointer">
+                        Cancel
+                      </Button>
+                      <Button type="submit" className="bg-brand-purple hover:bg-brand-purple/90 text-white rounded-xl cursor-pointer font-bold">
+                        Create Folder
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
         )}
       </div>
 

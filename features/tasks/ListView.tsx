@@ -377,16 +377,32 @@ export function ListView({
   const role = user?.role || 'staff';
 
   const [search, setSearch] = useState('');
+  const [showClosed, setShowClosed] = useState(false);
+
+  // Filter tasks: exclude closed/completed tasks by default
+  const visibleTasks = showClosed
+    ? tasks
+    : tasks.filter(t => t.status_type !== 'closed');
 
   const filteredTasks = search
-    ? tasks.filter(t => t.name.toLowerCase().includes(search.toLowerCase()))
-    : tasks;
+    ? visibleTasks.filter(t => t.name.toLowerCase().includes(search.toLowerCase()))
+    : visibleTasks;
 
   // Determine ordered status list — use statuses array as the canonical order.
-  // Fall back to collecting unique status names from tasks if statuses is empty.
-  const orderedStatuses = statuses.length > 0
-    ? statuses
+  // Move "Backlog" or similar statuses to the end
+  let orderedStatuses = statuses.length > 0
+    ? [...statuses]
     : Array.from(new Map(filteredTasks.map(t => [t.status, { id: t.status_id || t.status, name: t.status, color: '#94A3B8' }])).values());
+
+  // Reorder: Move Backlog/Archive statuses to the end
+  const backlogKeywords = ['backlog', 'archived', 'archive', 'done', 'closed'];
+  orderedStatuses = orderedStatuses.sort((a, b) => {
+    const aIsBacklog = backlogKeywords.some(k => a.name.toLowerCase().includes(k));
+    const bIsBacklog = backlogKeywords.some(k => b.name.toLowerCase().includes(k));
+    if (aIsBacklog && !bIsBacklog) return 1;
+    if (!aIsBacklog && bIsBacklog) return -1;
+    return 0;
+  });
 
   const handleAddTask = async (name: string, statusId?: string) => {
     await onAddTask(name, statusId);
@@ -407,6 +423,13 @@ export function ListView({
             onChange={e => setSearch(e.target.value)}
           />
         </div>
+        <button
+          onClick={() => setShowClosed(!showClosed)}
+          className="cl-archive-toggle"
+          title={showClosed ? 'Hide archived tasks' : 'Show archived tasks'}
+        >
+          {showClosed ? '✓ Show Archive' : 'Show Archive'}
+        </button>
       </div>
 
       {/* ── Status sections ── */}
@@ -480,6 +503,23 @@ export function ListView({
           border-color: var(--color-brand-pink);
         }
         .cl-search-input::placeholder { color: var(--color-text-muted); }
+
+        .cl-archive-toggle {
+          padding: 6px 12px;
+          background: rgba(102, 51, 255, 0.1);
+          border: 1px solid rgba(102, 51, 255, 0.3);
+          color: #6633FF;
+          border-radius: 6px;
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.15s;
+          white-space: nowrap;
+        }
+        .cl-archive-toggle:hover {
+          background: rgba(102, 51, 255, 0.2);
+          border-color: rgba(102, 51, 255, 0.5);
+        }
 
         /* === SECTIONS WRAPPER === */
         .cl-sections {
