@@ -67,10 +67,12 @@ export async function proxy(request: NextRequest) {
 
   if (role === 'staff') {
     const isAllowedForStaff =
+      pathname === '/' ||
       pathname === '/mytasks' ||
-      pathname.startsWith('/tasks/') ||
       pathname === '/calendar' ||
+      pathname === '/reporting' ||
       pathname === '/settings' ||
+      pathname.startsWith('/tasks/') ||
       pathname.startsWith('/api/');
 
     if (!isAllowedForStaff) {
@@ -78,7 +80,6 @@ export async function proxy(request: NextRequest) {
     }
   } else if (role === 'stakeholder') {
     const isAllowedForStakeholder =
-      pathname === '/' ||
       pathname === '/reporting' ||
       pathname === '/settings' ||
       pathname.startsWith('/api/');
