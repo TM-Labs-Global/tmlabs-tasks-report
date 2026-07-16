@@ -29,7 +29,7 @@ export async function proxy(request: NextRequest) {
         if (role === 'staff') {
           return NextResponse.redirect(new URL('/mytasks', request.url));
         } else if (role === 'stakeholder') {
-          return NextResponse.redirect(new URL('/reporting', request.url));
+          return NextResponse.redirect(new URL('/', request.url));
         } else {
           return NextResponse.redirect(new URL('/', request.url));
         }
@@ -67,11 +67,10 @@ export async function proxy(request: NextRequest) {
 
   if (role === 'staff') {
     const isAllowedForStaff =
-      pathname === '/' ||
       pathname === '/mytasks' ||
       pathname === '/calendar' ||
-      pathname === '/reporting' ||
       pathname === '/settings' ||
+      pathname.startsWith('/workspace/') ||
       pathname.startsWith('/tasks/') ||
       pathname.startsWith('/api/');
 
@@ -80,12 +79,15 @@ export async function proxy(request: NextRequest) {
     }
   } else if (role === 'stakeholder') {
     const isAllowedForStakeholder =
+      pathname === '/' ||
       pathname === '/reporting' ||
+      pathname === '/projects' ||
+      pathname === '/team' ||
       pathname === '/settings' ||
       pathname.startsWith('/api/');
 
     if (!isAllowedForStakeholder) {
-      return NextResponse.redirect(new URL('/reporting', request.url));
+      return NextResponse.redirect(new URL('/', request.url));
     }
   }
 

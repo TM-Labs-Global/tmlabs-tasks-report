@@ -100,9 +100,63 @@ body {
   font-family: var(--font-sans);
 }
 
-:root,
+:root {
+  /* ── Shadcn semantic tokens remapped to TM Labs design system (Light Mode) ── */
+
+  /* Backgrounds */
+  --background: var(--bg-primary);          /* #F8FAFC */
+  --foreground: var(--text-primary);         /* #0F172A */
+
+  --card: var(--bg-card);                    /* #FFFFFF */
+  --card-foreground: var(--text-primary);
+
+  --popover: var(--bg-elevated);             /* #F1F5F9 */
+  --popover-foreground: var(--text-primary);
+
+  /* Primary / Interactive */
+  --primary: var(--color-pink);              /* #FF3396 */
+  --primary-foreground: #ffffff;
+
+  --secondary: var(--bg-secondary);          /* #FFFFFF */
+  --secondary-foreground: var(--text-primary);
+
+  --muted: #F1F5F9;
+  --muted-foreground: var(--text-secondary);
+
+  --accent: #E2E8F0;
+  --accent-foreground: var(--text-primary);
+
+  --destructive: #EF4444;
+  --destructive-foreground: #ffffff;
+
+  /* Borders & Inputs */
+  --border: var(--border-default);
+  --input: var(--border-strong);
+  --ring: var(--color-pink);
+
+  /* Radius */
+  --radius: 0.625rem;
+
+  /* Charts — mapped to TM Labs brand palette */
+  --chart-1: var(--color-pink);
+  --chart-2: var(--color-purple);
+  --chart-3: #00F2FE;
+  --chart-4: #F59E0B;
+  --chart-5: #22C55E;
+
+  /* Sidebar */
+  --sidebar: var(--bg-secondary);
+  --sidebar-foreground: var(--text-primary);
+  --sidebar-primary: var(--color-pink);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #F1F5F9;
+  --sidebar-accent-foreground: var(--text-primary);
+  --sidebar-border: var(--border-default);
+  --sidebar-ring: var(--color-pink);
+}
+
 .dark {
-  /* ── Shadcn semantic tokens remapped to TM Labs design system ── */
+  /* ── Shadcn semantic tokens remapped to TM Labs design system (Dark Mode) ── */
 
   /* Backgrounds */
   --background: var(--bg-primary);          /* #0F1B35 */

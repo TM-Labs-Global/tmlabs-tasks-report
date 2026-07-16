@@ -1,6 +1,53 @@
-:root {
-  /* === TM Labs Dark Mode — Always On === */
+/* === TM Labs Design System — Semantics === */
 
+/* === TM Labs Light Mode (Default) === */
+:root {
+  /* Backgrounds */
+  --bg-primary: #F8FAFC;
+  --bg-secondary: #FFFFFF;
+  --bg-card: #FFFFFF;
+  --bg-elevated: #F1F5F9;
+  --bg-overlay: rgba(15, 23, 42, 0.65);
+
+  /* Text */
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #94A3B8;
+  --text-accent: var(--color-pink);
+  --text-inverse: #FFFFFF;
+
+  /* Borders */
+  --border-default: #E2E8F0;
+  --border-subtle: #F1F5F9;
+  --border-strong: #CBD5E1;
+  --border-focus: var(--color-pink);
+
+  /* Status Colors */
+  --status-complete: #22C55E;
+  --status-in-progress: #F59E0B;
+  --status-blocked: #EF4444;
+  --status-todo: #94A3B8;
+  --status-review: var(--color-purple);
+
+  /* Priority Colors */
+  --priority-urgent: #EF4444;
+  --priority-high: #F97316;
+  --priority-normal: #6633FF;
+  --priority-low: #475569;
+  --priority-none: #94A3B8;
+
+  /* Action / Accent */
+  --accent: var(--color-accent-primary);
+  --accent-hover: var(--color-accent-hover);
+  --accent-brand: var(--color-accent-brand);
+
+  /* Globals for compatibility */
+  --background: var(--bg-primary);
+  --foreground: var(--text-primary);
+}
+
+/* === TM Labs Dark Mode (Override) === */
+.dark {
   /* Backgrounds */
   --bg-primary: var(--color-navy); /* #0F1B35 */
   --bg-secondary: var(--color-navy-2); /* #1A2847 */
@@ -33,7 +80,7 @@
   --priority-high: var(--color-priority-high);
   --priority-normal: var(--color-priority-normal);
   --priority-low: var(--color-priority-low);
-  --priority-none: var(--color-priority-none);
+  --priority-none: var(--priority-none);
 
   /* Action / Accent */
   --accent: var(--color-accent-primary);

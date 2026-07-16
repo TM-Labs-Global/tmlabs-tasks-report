@@ -106,6 +106,21 @@ export default function ListDetailPage() {
     }
   };
 
+  const handleUpdateTask = async (taskId: string, fields: Record<string, any>) => {
+    try {
+      const res = await fetch(`/api/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(fields),
+      });
+      if (res.ok) {
+        refreshData();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-[80vh] space-y-4">
@@ -165,6 +180,7 @@ export default function ListDetailPage() {
             onUpdateStatus={handleUpdateStatus}
             onDeleteTask={handleDeleteTask}
             onAddTask={handleAddTask}
+            onUpdateTask={handleUpdateTask}
           />
         ) : (
           <BoardView 

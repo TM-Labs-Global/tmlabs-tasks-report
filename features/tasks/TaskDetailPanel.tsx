@@ -188,6 +188,19 @@ export function TaskDetailPanel({
     return 'No Priority';
   };
 
+  // ── Assignee helpers ──────────────────────────────────────────────────────
+  const currentAssigneeIds: string[] = (task.assignees || [])
+    .map((a: any) => a.profile?.id)
+    .filter(Boolean);
+
+  const handleToggleAssignee = async (profileId: string) => {
+    const isCurrentlyAssigned = currentAssigneeIds.includes(profileId);
+    const newIds = isCurrentlyAssigned
+      ? currentAssigneeIds.filter((id) => id !== profileId)
+      : [...currentAssigneeIds, profileId];
+    await handleFieldUpdate({ assignee_ids: newIds });
+  };
+
   return (
     <SheetContent showCloseButton={false} className="bg-card border-l border-slate-700/20 w-full sm:max-w-2xl p-0 text-primary flex flex-col h-full shadow-2xl">
       {/* Top action header */}
@@ -314,6 +327,83 @@ export function TaskDetailPanel({
                 </div>
               )}
             </div>
+          </div>
+
+          {/* ── Assignees ── */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-caption font-bold text-secondary uppercase tracking-wide">Assignees</label>
+              {canEditAll && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-brand-pink hover:text-brand-pink/80 rounded-lg cursor-pointer h-7 text-[11px] font-bold"
+                    >
+                      <Plus size={12} /> Add
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="bg-card border border-slate-700/30 text-primary rounded-xl w-52 max-h-60 overflow-y-auto">
+                    {members.length === 0 ? (
+                      <DropdownMenuItem disabled className="text-caption text-muted">
+                        No members found
+                      </DropdownMenuItem>
+                    ) : (
+                      members.map((member: any) => {
+                        const isAssigned = currentAssigneeIds.includes(member.id);
+                        return (
+                          <DropdownMenuItem
+                            key={member.id}
+                            onClick={() => handleToggleAssignee(member.id)}
+                            className="gap-2 cursor-pointer text-caption font-medium hover:bg-elevated"
+                          >
+                            <div className="w-6 h-6 rounded-full bg-brand-pink/20 text-brand-pink flex items-center justify-center font-bold text-[10px] flex-shrink-0 uppercase">
+                              {(member.full_name || member.email || '?').charAt(0)}
+                            </div>
+                            <span className="flex-1 truncate">{member.full_name || member.email}</span>
+                            {isAssigned && <CheckCircle size={14} className="text-brand-pink flex-shrink-0" />}
+                          </DropdownMenuItem>
+                        );
+                      })
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
+
+            {task.assignees && task.assignees.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {task.assignees.map((a: any) => {
+                  const name = a.profile?.full_name || a.profile?.email || 'Unknown';
+                  const initial = name.charAt(0).toUpperCase();
+                  return (
+                    <div
+                      key={a.profile?.id}
+                      className="flex items-center gap-1.5 px-2 py-1 bg-secondary/30 border border-slate-700/20 rounded-full text-[11px] font-semibold text-primary"
+                    >
+                      <div className="w-5 h-5 rounded-full bg-brand-pink/20 text-brand-pink flex items-center justify-center font-bold text-[9px] uppercase flex-shrink-0">
+                        {initial}
+                      </div>
+                      <span className="truncate max-w-[120px]">{name}</span>
+                      {canEditAll && (
+                        <button
+                          onClick={() => handleToggleAssignee(a.profile?.id)}
+                          className="text-muted hover:text-red-400 transition-colors ml-0.5 flex-shrink-0 cursor-pointer"
+                          title={`Remove ${name}`}
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-caption text-muted text-center py-2 border border-dashed border-slate-700/10 rounded-xl">
+                No assignees yet.
+              </div>
+            )}
           </div>
 
           {/* Description */}

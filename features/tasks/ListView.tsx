@@ -25,6 +25,7 @@ interface ListViewProps {
   onUpdateStatus: (taskId: string, statusId: string) => Promise<void>;
   onDeleteTask: (taskId: string) => Promise<void>;
   onAddTask: (taskName: string, statusId?: string) => Promise<void>;
+  onUpdateTask?: (taskId: string, fields: Record<string, any>) => Promise<void>;
 }
 
 // ─── Priority helpers (ClickUp standard colors) ────────────────────────────
@@ -118,7 +119,6 @@ function AddTaskRow({
   );
 }
 
-// ─── Single task row ────────────────────────────────────────────────────────
 function TaskRow({
   task,
   statuses,
@@ -126,6 +126,7 @@ function TaskRow({
   onTaskClick,
   onUpdateStatus,
   onDeleteTask,
+  onUpdateTask,
 }: {
   task: any;
   statuses: any[];
@@ -133,6 +134,7 @@ function TaskRow({
   onTaskClick: (id: string) => void;
   onUpdateStatus: (taskId: string, statusId: string) => Promise<void>;
   onDeleteTask: (taskId: string) => Promise<void>;
+  onUpdateTask?: (taskId: string, fields: Record<string, any>) => Promise<void>;
 }) {
   const isOverdue = task.flags?.isOverdue;
   const isBlocked = task.flags?.isBlocked;
@@ -141,6 +143,29 @@ function TaskRow({
   const dueDateText = task.due_date
     ? format(new Date(task.due_date), 'MMM d')
     : null;
+
+  // ── Inline name edit state ───────────────────────────────────────────────
+  const [editingName, setEditingName] = useState(false);
+  const [draftName, setDraftName] = useState(task.name);
+
+  const startEditing = () => {
+    if (role !== 'product_manager' || !onUpdateTask) return;
+    setDraftName(task.name);
+    setEditingName(true);
+  };
+
+  const commitEdit = async () => {
+    const trimmed = draftName.trim();
+    setEditingName(false);
+    if (trimmed && trimmed !== task.name && onUpdateTask) {
+      await onUpdateTask(task.id, { name: trimmed });
+    }
+  };
+
+  const cancelEdit = () => {
+    setDraftName(task.name);
+    setEditingName(false);
+  };
 
   return (
     <div
@@ -175,13 +200,28 @@ function TaskRow({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <span
-          className="cl-task-name"
-          onClick={() => onTaskClick(task.id)}
-          title={task.name}
-        >
-          {task.name}
-        </span>
+        {editingName ? (
+          <input
+            autoFocus
+            className="cl-task-name-edit"
+            value={draftName}
+            onChange={e => setDraftName(e.target.value)}
+            onBlur={commitEdit}
+            onKeyDown={e => {
+              if (e.key === 'Enter') commitEdit();
+              if (e.key === 'Escape') cancelEdit();
+            }}
+          />
+        ) : (
+          <span
+            className={`cl-task-name${role === 'product_manager' ? ' cl-task-name--editable' : ''}`}
+            onClick={() => onTaskClick(task.id)}
+            onDoubleClick={startEditing}
+            title={role === 'product_manager' ? 'Double-click to edit name' : task.name}
+          >
+            {task.name}
+          </span>
+        )}
 
         {/* Tags */}
         {task.tags && task.tags.length > 0 && (
@@ -286,6 +326,7 @@ function StatusSection({
   onUpdateStatus,
   onDeleteTask,
   onAddTask,
+  onUpdateTask,
 }: {
   status: any;
   tasks: any[];
@@ -295,6 +336,7 @@ function StatusSection({
   onUpdateStatus: (taskId: string, statusId: string) => Promise<void>;
   onDeleteTask: (taskId: string) => Promise<void>;
   onAddTask: (name: string, statusId: string) => Promise<void>;
+  onUpdateTask?: (taskId: string, fields: Record<string, any>) => Promise<void>;
 }) {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -346,6 +388,7 @@ function StatusSection({
                 onTaskClick={onTaskClick}
                 onUpdateStatus={onUpdateStatus}
                 onDeleteTask={onDeleteTask}
+                onUpdateTask={onUpdateTask}
               />
             ))
           ) : (
@@ -372,6 +415,7 @@ export function ListView({
   onUpdateStatus,
   onDeleteTask,
   onAddTask,
+  onUpdateTask,
 }: ListViewProps) {
   const { user } = useAuth();
   const role = user?.role || 'staff';
@@ -447,6 +491,7 @@ export function ListView({
               onUpdateStatus={onUpdateStatus}
               onDeleteTask={onDeleteTask}
               onAddTask={handleAddTask}
+              onUpdateTask={onUpdateTask}
             />
           );
         })}
@@ -680,6 +725,25 @@ export function ListView({
           transition: color 0.12s;
         }
         .cl-task-name:hover { color: var(--color-brand-pink); }
+        .cl-task-name--editable:hover {
+          text-decoration: underline dotted rgba(255,255,255,0.3);
+        }
+
+        /* === INLINE NAME EDIT INPUT === */
+        .cl-task-name-edit {
+          flex: 1;
+          min-width: 0;
+          height: 24px;
+          padding: 0 6px;
+          font-size: 13px;
+          font-weight: 500;
+          color: var(--color-text-primary);
+          background: var(--color-surface-2);
+          border: 1.5px solid var(--color-brand-pink);
+          border-radius: 4px;
+          outline: none;
+          caret-color: var(--color-brand-pink);
+        }
 
         /* === TAGS === */
         .cl-tag-row {

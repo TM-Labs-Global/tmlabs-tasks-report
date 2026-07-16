@@ -69,7 +69,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
         >
           <Menu size={20} />
         </button>
-        <h2 className="text-h2 font-bold text-primary tracking-tight">{getTitle()}</h2>
+        <h2 className="text-base sm:text-lg md:text-h2 font-bold text-primary tracking-tight truncate max-w-[140px] sm:max-w-none">{getTitle()}</h2>
 
         <div className="hidden lg:flex items-center gap-2 ml-6">
           <span className="text-[10px] font-bold text-muted uppercase tracking-widest">Status:</span>
@@ -89,12 +89,12 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2 mr-4">
+      <div className="flex items-center gap-2 sm:gap-3">
+        <div className="hidden md:flex items-center gap-2 mr-2">
           {isConfigured ? (
             <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20">
               <Circle size={6} className="fill-green-500 text-green-500" />
-              <span className="text-[10px] font-bold text-green-500 uppercase tracking-widest">Live Sync Active</span>
+              <span className="text-[10px] font-bold text-green-500 uppercase tracking-widest">Live Sync</span>
             </div>
           ) : (
             <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20">
@@ -107,11 +107,11 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
         <button 
           onClick={refreshData}
           disabled={isLoading || !isConfigured}
-
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-caption font-bold transition-all shadow-sm ${isLoading ? 'bg-secondary text-muted' : 'bg-brand-pink text-white hover:bg-opacity-90 hover:scale-105 shadow-brand-pink/20'}`}
+          className={`flex items-center gap-2 px-2.5 py-2 sm:px-4 sm:py-2 rounded-xl text-caption font-bold transition-all shadow-sm ${isLoading ? 'bg-secondary text-muted' : 'bg-brand-pink text-white hover:bg-opacity-90 hover:scale-105 shadow-brand-pink/20'}`}
+          title={isLoading ? 'Syncing...' : 'Sync Now'}
         >
           {isLoading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
-          {isLoading ? 'Syncing...' : 'Sync Now'}
+          <span className="hidden sm:inline">{isLoading ? 'Syncing...' : 'Sync Now'}</span>
         </button>
 
         <div className="w-px h-6 bg-slate-700/20 mx-1" />

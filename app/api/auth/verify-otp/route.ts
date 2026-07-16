@@ -99,8 +99,19 @@ export async function POST(request: Request) {
           role = profileRes.data.role;
           isDeactivated = profileRes.data.status === 'deactivated';
           
-          // If status is pending, make it active since they logged in successfully
+           // If status is pending, make it active since they logged in successfully
           if (profileRes.data.status === 'pending') {
+            const createdAt = new Date(profileRes.data.created_at).getTime();
+            const fortyEightHoursMs = 48 * 60 * 60 * 1000;
+            if (Date.now() - createdAt > fortyEightHoursMs) {
+              // Cancel / deactivate the expired invitation
+              await supabaseAdmin
+                .from('profiles')
+                .update({ status: 'deactivated' })
+                .eq('email', normalizedEmail);
+              return NextResponse.json({ error: 'Access denied. This invitation has expired (48-hour limit) and is now cancelled.' }, { status: 403 });
+            }
+
             await supabaseAdmin
               .from('profiles')
               .update({ status: 'active', id: userUuid })

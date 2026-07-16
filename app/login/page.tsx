@@ -117,10 +117,31 @@ export default function LoginPage() {
         setTimeout(() => otpRefs.current[0]?.focus(), 50);
         return;
       }
-      // Success — check if this is an invited user and route to workspace
+      // Success — check if this is an invited user and route to workspace or role-based home
       const searchParams = new URLSearchParams(window.location.search);
       const isInvited = searchParams.get('invited') === 'true';
-      const redirectUrl = isInvited ? '/workspace' : '/';
+      
+      let redirectUrl = '/';
+      const role = data.role || 'staff';
+
+      if (isInvited) {
+        if (role === 'staff') {
+          redirectUrl = '/mytasks';
+        } else if (role === 'stakeholder') {
+          redirectUrl = '/';
+        } else {
+          redirectUrl = '/workspace';
+        }
+      } else {
+        if (role === 'staff') {
+          redirectUrl = '/mytasks';
+        } else if (role === 'stakeholder') {
+          redirectUrl = '/';
+        } else {
+          redirectUrl = '/';
+        }
+      }
+      
       window.location.href = redirectUrl;
     } catch {
       setError('Network error. Please try again.');

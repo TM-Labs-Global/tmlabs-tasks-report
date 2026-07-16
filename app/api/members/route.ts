@@ -86,7 +86,9 @@ export async function POST(request: Request) {
     // Send invite email via Resend (if configured)
     if (process.env.RESEND_API_KEY) {
       try {
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://tmlabs.xyz';
+        const proto = request.headers.get('x-forwarded-proto') || 'http';
+        const host = request.headers.get('host') || 'localhost:3000';
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || `${proto}://${host}`;
         const emailRes = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
@@ -105,7 +107,7 @@ export async function POST(request: Request) {
                   You have been invited to join the TM Labs PM Platform as <strong style="color:#F0F4FF;">${role.replace('_', ' ')}</strong>.
                 </p>
                 <p style="color:#8A9CC8;margin:0 0 24px;">
-                  To get started, simply log in with your email address. No password needed — we'll send you a one-time code.
+                  Please note: This invitation is valid for 48 hours. After 48 hours, the invitation will automatically expire and be cancelled.
                 </p>
                 <a href="${appUrl}/login?invited=true" style="display:inline-block;background:linear-gradient(135deg,#FF3396,#6633FF);color:white;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:15px;">
                   Accept Invitation & Sign In
