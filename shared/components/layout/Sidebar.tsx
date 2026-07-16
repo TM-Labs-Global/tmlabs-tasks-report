@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/shared/context/AuthContext';
 import { useClickUp } from '@/shared/context/ClickUpContext';
+import { useWorkspace } from '@/shared/context/WorkspaceContext';
 
 import { 
   LayoutDashboard, 
@@ -14,55 +15,62 @@ import {
   ChevronLeft, 
   ChevronRight,
   LogOut,
-  History,
-  User as UserIcon,
   CheckSquare,
   Calendar,
   Settings,
-  FolderOpen
+  FolderOpen,
+  ListTodo,
 } from 'lucide-react';
+import { NotificationBell } from './NotificationBell';
 
 export function Sidebar({ isOpen, onClose }: { isOpen?: boolean, onClose?: () => void }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const pathname = usePathname();
   const { user, logout } = useAuth();
-  const { token, teams, selectedTeamId, setToken } = useClickUp();
+  const { teams, selectedTeamId } = useClickUp();
+  const { spaces } = useWorkspace();
 
   const selectedTeam = teams.find(t => t.id === selectedTeamId);
   const role = user?.role || 'staff';
 
-  // Define navigation based on roles
-  const getNavItems = () => {
-    const items: { name: string; href: string; icon: any }[] = [];
-
-    if (role === 'stakeholder') {
-      // Stakeholders ONLY see Reporting Center
-      items.push({ name: 'Reporting Center', href: '/reporting', icon: ClipboardList });
-    } else if (role === 'staff') {
-      // Staff see: Dashboard, My Tasks, Calendar, Reporting (read-only), Settings
-      items.push({ name: 'Dashboard', href: '/', icon: LayoutDashboard });
-      items.push({ name: 'My Tasks', href: '/mytasks', icon: CheckSquare });
-      items.push({ name: 'Reporting Center', href: '/reporting', icon: ClipboardList });
-      items.push({ name: 'Calendar', href: '/calendar', icon: Calendar });
-    } else if (role === 'product_manager') {
-      // PMs see EVERYTHING
-      items.push({ name: 'Dashboard', href: '/', icon: LayoutDashboard });
-      items.push({ name: 'Reporting Center', href: '/reporting', icon: ClipboardList });
-      items.push({ name: 'Team Performance', href: '/team', icon: Users });
-      items.push({ name: 'Project Health', href: '/projects', icon: FolderKanban });
-      items.push({ name: 'My Tasks', href: '/mytasks', icon: CheckSquare });
-      items.push({ name: 'Workspace', href: '/workspace', icon: FolderOpen });
-      items.push({ name: 'Calendar', href: '/calendar', icon: Calendar });
-      items.push({ name: 'Team Members', href: '/members', icon: Users });
+  // ── Collect all lists from workspace hierarchy ─────────────────────────────
+  // For Staff: these are the "projects" they can navigate to
+  const allLists: { id: string; name: string; color: string }[] = [];
+  for (const space of (spaces || [])) {
+    for (const list of (space.folderlessLists || [])) {
+      allLists.push({ id: list.id, name: list.name, color: list.color || space.color || '#FF3396' });
     }
+    for (const folder of (space.folders || [])) {
+      for (const list of (folder.lists || [])) {
+        allLists.push({ id: list.id, name: list.name, color: list.color || space.color || '#FF3396' });
+      }
+    }
+  }
 
-    // Settings visible to all
-    items.push({ name: 'Settings', href: '/settings', icon: Settings });
-
-    return items;
+  const renderNavLink = (item: { name: string; href: string; icon: any }) => {
+    const isActive = item.href === '/'
+      ? pathname === '/'
+      : pathname === item.href || pathname.startsWith(item.href + '/');
+    const Icon = item.icon;
+    return (
+      <Link
+        key={item.name}
+        href={item.href}
+        className={`
+          flex items-center p-2 rounded-lg transition-colors duration-150 group
+          ${isActive 
+            ? 'bg-brand-pink/10 text-brand-pink' 
+            : 'text-secondary hover:bg-elevated hover:text-primary'
+          }
+        `}
+      >
+        <Icon size={20} className={isActive ? 'text-brand-pink' : 'text-secondary group-hover:text-primary'} />
+        {!isCollapsed && (
+          <span className="ml-3 text-body font-medium truncate">{item.name}</span>
+        )}
+      </Link>
+    );
   };
-
-  const navItems = getNavItems();
 
   return (
     <>
@@ -98,32 +106,80 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean, onClose?: () =>
       </div>
 
       {/* Navigation Items */}
-      <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
-          const Icon = item.icon;
-          
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={`
-                flex items-center p-2 rounded-lg transition-colors duration-150 group
-                ${isActive 
-                  ? 'bg-brand-pink/10 text-brand-pink' 
-                  : 'text-secondary hover:bg-elevated hover:text-primary'
-                }
-              `}
-            >
-              <Icon size={20} className={isActive ? 'text-brand-pink' : 'text-secondary group-hover:text-primary'} />
-              {!isCollapsed && (
-                <span className="ml-3 text-body font-medium truncate">
-                  {item.name}
-                </span>
-              )}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 py-4 px-2 overflow-y-auto space-y-1">
+
+        {/* ── STAFF ── */}
+        {role === 'staff' && (
+          <>
+            {renderNavLink({ name: 'My Tasks', href: '/mytasks', icon: CheckSquare })}
+            {renderNavLink({ name: 'Calendar', href: '/calendar', icon: Calendar })}
+
+            {/* Assigned Projects */}
+            {allLists.length > 0 && (
+              <>
+                {!isCollapsed && (
+                  <p className="text-[10px] text-muted uppercase tracking-widest font-bold pt-4 pb-1 px-2">
+                    My Projects
+                  </p>
+                )}
+                {isCollapsed && <div className="border-t border-slate-700/20 my-2" />}
+                {allLists.map(list => {
+                  const href = `/workspace/${list.id}`;
+                  const isActive = pathname === href;
+                  return (
+                    <Link
+                      key={list.id}
+                      href={href}
+                      title={list.name}
+                      className={`
+                        flex items-center p-2 rounded-lg transition-colors duration-150 group text-caption font-medium
+                        ${isActive
+                          ? 'bg-brand-pink/10 text-brand-pink'
+                          : 'text-secondary hover:bg-elevated hover:text-primary'
+                        }
+                      `}
+                    >
+                      <span
+                        className="w-[18px] h-[18px] rounded-sm flex-shrink-0 flex items-center justify-center"
+                        style={{ background: `${list.color}22`, border: `1.5px solid ${list.color}55` }}
+                      >
+                        <ListTodo size={11} style={{ color: list.color }} />
+                      </span>
+                      {!isCollapsed && (
+                        <span className="ml-3 truncate">{list.name}</span>
+                      )}
+                    </Link>
+                  );
+                })}
+              </>
+            )}
+          </>
+        )}
+
+        {/* ── STAKEHOLDER ── */}
+        {role === 'stakeholder' && (
+          <>
+            {renderNavLink({ name: 'Overview', href: '/', icon: LayoutDashboard })}
+            {renderNavLink({ name: 'Reporting Center', href: '/reporting', icon: ClipboardList })}
+            {renderNavLink({ name: 'Project Health', href: '/projects', icon: FolderKanban })}
+            {renderNavLink({ name: 'Team Performance', href: '/team', icon: Users })}
+          </>
+        )}
+
+        {/* ── PRODUCT MANAGER ── */}
+        {role === 'product_manager' && (
+          <>
+            {renderNavLink({ name: 'Dashboard', href: '/', icon: LayoutDashboard })}
+            {renderNavLink({ name: 'My Tasks', href: '/mytasks', icon: CheckSquare })}
+            {renderNavLink({ name: 'Workspace', href: '/workspace', icon: FolderOpen })}
+            {renderNavLink({ name: 'Calendar', href: '/calendar', icon: Calendar })}
+            {renderNavLink({ name: 'Team Members', href: '/members', icon: Users })}
+            {renderNavLink({ name: 'Reporting Center', href: '/reporting', icon: ClipboardList })}
+            {renderNavLink({ name: 'Team Performance', href: '/team', icon: Users })}
+            {renderNavLink({ name: 'Project Health', href: '/projects', icon: FolderKanban })}
+          </>
+        )}
+
       </nav>
 
       {/* Footer / User Profile Area */}
@@ -153,6 +209,13 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean, onClose?: () =>
           </div>
         )}
         
+        {renderNavLink({ name: 'Settings', href: '/settings', icon: Settings })}
+
+        {/* Notification Bell (staff + PM only) */}
+        {role !== 'stakeholder' && (
+          <NotificationBell isCollapsed={isCollapsed} />
+        )}
+
         <button
           onClick={async () => {
             if (confirm('Are you sure you want to logout?')) {
@@ -181,5 +244,3 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean, onClose?: () =>
     </>
   );
 }
-
-
