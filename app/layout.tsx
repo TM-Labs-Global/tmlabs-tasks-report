@@ -6,10 +6,6 @@ import { AuthProvider } from "@/shared/context/AuthContext";
 import { WorkspaceProvider } from "@/shared/context/WorkspaceContext";
 import { LayoutWrapper } from "@/shared/components/layout/LayoutWrapper";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Geist } from "next/font/google";
-import { cn } from "@/lib/utils";
-
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
   title: "TM Labs Product Operations Dashboard",
@@ -22,7 +18,30 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn("dark", "font-sans", geist.variable)}>
+    <html lang="en" className="font-sans" suppressHydrationWarning>
+      {/* Inline script runs synchronously before first paint — prevents theme flicker */}
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var saved = localStorage.getItem('theme-mode');
+                  var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                  var isDark = saved ? saved === 'dark' : true; // default dark
+                  if (isDark) {
+                    document.documentElement.classList.add('dark');
+                  } else {
+                    document.documentElement.classList.remove('dark');
+                  }
+                } catch(e) {
+                  document.documentElement.classList.add('dark');
+                }
+              })();
+            `,
+          }}
+        />
+      </head>
       <body className="antialiased font-sans bg-background text-foreground selection:bg-brand-pink/30 selection:text-brand-pink">
         <AuthProvider>
           <WorkspaceProvider>

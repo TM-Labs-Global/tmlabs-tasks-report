@@ -292,7 +292,12 @@ export default function WorkspacePage() {
                   <span className="text-2xl" style={{ textShadow: `0 0 10px ${space.color}40` }}>{space.icon}</span>
                   <div>
                     <CardTitle className="text-body font-bold text-primary flex items-center gap-2">
-                      {space.name}
+                      <Link 
+                        href={`/workspace/space/${space.id}`}
+                        className="hover:text-brand-pink hover:underline transition-colors"
+                      >
+                        {space.name}
+                      </Link>
                       <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: space.color }} />
                     </CardTitle>
                     <CardDescription className="text-caption text-secondary">
@@ -317,10 +322,16 @@ export default function WorkspacePage() {
                   {/* Folders */}
                   {space.folders?.map((folder: any) => (
                     <div key={folder.id} className="space-y-2">
-                      <div className="flex items-center gap-2 text-caption text-primary font-bold px-1.5 py-1 bg-elevated/40 rounded-lg border border-slate-700/10">
-                        <Folder size={14} className="text-brand-purple" />
-                        <span>{folder.name}</span>
-                      </div>
+                      <Link 
+                        href={`/workspace/folder/${folder.id}`}
+                        className="flex items-center justify-between text-caption text-primary font-bold px-2 py-1.5 bg-elevated/40 hover:bg-elevated/80 rounded-lg border border-slate-700/10 transition-colors group"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Folder size={14} className="text-brand-purple" />
+                          <span className="group-hover:text-brand-purple transition-colors">{folder.name}</span>
+                        </div>
+                        <ArrowRight size={12} className="text-muted opacity-0 group-hover:opacity-100 group-hover:text-primary transition-all translate-x-[-4px] group-hover:translate-x-0" />
+                      </Link>
                       <div className="pl-4 space-y-1.5 border-l border-slate-700/10 ml-3">
                         {folder.lists?.map((list: any) => {
                           const stats = getListTaskStats(list.id);

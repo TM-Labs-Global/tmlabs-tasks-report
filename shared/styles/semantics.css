@@ -2,38 +2,43 @@
 
 /* === TM Labs Light Mode (Default) === */
 :root {
-  /* Backgrounds */
-  --bg-primary: #F8FAFC;
-  --bg-secondary: #FFFFFF;
-  --bg-card: #FFFFFF;
-  --bg-elevated: #F1F5F9;
-  --bg-overlay: rgba(15, 23, 42, 0.65);
+  /* ── Canvas & Container Backgrounds ── */
+  --bg-primary: #F7F8FA;        /* Crisp off-white canvas (#F7F8FA) */
+  --bg-secondary: #FFFFFF;      /* Pure white sidebar & panels (#FFFFFF) */
+  --bg-card: #FFFFFF;           /* Card / row background */
+  --bg-elevated: #F0F2F5;       /* Elevated surface / hover background */
+  --bg-overlay: rgba(0, 0, 0, 0.4);
 
-  /* Text */
-  --text-primary: #0F172A;
-  --text-secondary: #475569;
-  --text-muted: #94A3B8;
+  /* ── Icon Rail & Row Separators ── */
+  --cu-icon-rail: #F0F2F5;      /* Light icon rail strip */
+  --cu-row-border: #E4E7EC;     /* Divider lines (#E4E7EC) */
+  --cu-in-progress: #645BFF;    /* Status badge highlight */
+
+  /* Text (High-Contrast WCAG Compliant) */
+  --text-primary: #1A1D20;       /* Dark charcoal text (#1A1D20) */
+  --text-secondary: #5A6068;     /* Medium gray text (#5A6068) */
+  --text-muted: #8A9099;         /* Muted gray text (#8A9099) */
   --text-accent: var(--color-pink);
   --text-inverse: #FFFFFF;
 
   /* Borders */
-  --border-default: #E2E8F0;
-  --border-subtle: #F1F5F9;
+  --border-default: #E4E7EC;     /* Light gray border (#E4E7EC) */
+  --border-subtle: #F0F2F5;
   --border-strong: #CBD5E1;
   --border-focus: var(--color-pink);
 
   /* Status Colors */
-  --status-complete: #22C55E;
-  --status-in-progress: #F59E0B;
-  --status-blocked: #EF4444;
-  --status-todo: #94A3B8;
+  --status-complete: #16A34A;
+  --status-in-progress: #2563EB;
+  --status-blocked: #DC2626;
+  --status-todo: #64748B;
   --status-review: var(--color-purple);
 
   /* Priority Colors */
-  --priority-urgent: #EF4444;
-  --priority-high: #F97316;
-  --priority-normal: #6633FF;
-  --priority-low: #475569;
+  --priority-urgent: #DC2626;
+  --priority-high: #EA580C;
+  --priority-normal: #2563EB;
+  --priority-low: #64748B;
   --priority-none: #94A3B8;
 
   /* Action / Accent */
@@ -46,26 +51,32 @@
   --foreground: var(--text-primary);
 }
 
-/* === TM Labs Dark Mode (Override) === */
+
+/* === TM Labs Dark Mode (Override — Brand Guidelines Navy Palette) === */
 .dark {
-  /* Backgrounds */
-  --bg-primary: var(--color-navy); /* #0F1B35 */
-  --bg-secondary: var(--color-navy-2); /* #1A2847 */
-  --bg-card: var(--color-surface-1); /* #1A2440 */
-  --bg-elevated: var(--color-surface-2); /* #202C4A */
+  /* ── TM Labs Deep Navy Brand Backgrounds ── */
+  --bg-primary: #0F1B35;        /* Deep Navy main canvas background (#0F1B35) */
+  --bg-secondary: #1A2847;      /* Secondary Navy sidebar background (#1A2847) */
+  --bg-card: #1A2440;           /* Surface 1 card background (#1A2440) */
+  --bg-elevated: #202C4A;       /* Surface 2 elevated background (#202C4A) */
   --bg-overlay: rgba(15, 27, 53, 0.85);
 
+  /* ── Icon Rail & Borders ── */
+  --cu-icon-rail: #0B1428;      /* Deepest Navy icon rail */
+  --cu-row-border: rgba(255, 255, 255, 0.08); /* Row separator lines */
+  --cu-in-progress: #645BFF;    /* IN PROGRESS pill badge */
+
   /* Text */
-  --text-primary: var(--color-text-primary); /* #F0F4FF */
-  --text-secondary: var(--color-text-secondary); /* #8A9CC8 */
-  --text-muted: var(--color-text-muted); /* #4A5A82 */
-  --text-accent: var(--color-pink); /* #FF3396 */
-  --text-inverse: var(--color-navy); /* #0F1B35 */
+  --text-primary: #F0F4FF;       /* Soft white primary text */
+  --text-secondary: #8A9CC8;     /* Muted blue-slate text */
+  --text-muted: #4A5A82;         /* Dim blue text */
+  --text-accent: var(--color-pink);
+  --text-inverse: #0F1B35;
 
   /* Borders */
-  --border-default: var(--color-border); /* rgba(255, 255, 255, 0.07) */
+  --border-default: rgba(255, 255, 255, 0.08);
   --border-subtle: rgba(255, 255, 255, 0.04);
-  --border-strong: var(--color-border-strong); /* rgba(255, 255, 255, 0.14) */
+  --border-strong: rgba(255, 255, 255, 0.15);
   --border-focus: var(--color-pink);
 
   /* Status Colors */
@@ -80,7 +91,7 @@
   --priority-high: var(--color-priority-high);
   --priority-normal: var(--color-priority-normal);
   --priority-low: var(--color-priority-low);
-  --priority-none: var(--priority-none);
+  --priority-none: #4A5A82;
 
   /* Action / Accent */
   --accent: var(--color-accent-primary);

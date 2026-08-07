@@ -1,246 +1,637 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/shared/context/AuthContext';
 import { useClickUp } from '@/shared/context/ClickUpContext';
 import { useWorkspace } from '@/shared/context/WorkspaceContext';
 
-import { 
-  LayoutDashboard, 
-  ClipboardList, 
-  Users, 
-  FolderKanban, 
-  ChevronLeft, 
-  ChevronRight,
-  LogOut,
+import {
+  LayoutDashboard,
   CheckSquare,
   Calendar,
   Settings,
+  LogOut,
+  ChevronDown,
+  ChevronRight,
+  Sun,
+  Moon,
+  Folder,
+  List,
+  Users,
+  ClipboardList,
+  FolderKanban,
   FolderOpen,
   ListTodo,
+  UserCheck,
+  Plus,
+  Home,
+  Inbox,
+  Target,
+  FileText,
 } from 'lucide-react';
 import { NotificationBell } from './NotificationBell';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
-export function Sidebar({ isOpen, onClose }: { isOpen?: boolean, onClose?: () => void }) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+// ─── Types ────────────────────────────────────────────────────────────────────
+interface NavItem {
+  name: string;
+  href: string;
+  icon: any;
+}
+
+// ─── Icon Rail Button (Fixed ultra-thin strip with Floating Hover Tooltip) ────
+function RailIcon({
+  href,
+  icon: Icon,
+  label,
+  active,
+  onClick,
+}: {
+  href?: string;
+  icon: any;
+  label: string;
+  active?: boolean;
+  onClick?: () => void;
+}) {
+  const base =
+    'relative w-9 h-9 flex items-center justify-center rounded-lg transition-all duration-150 group cursor-pointer';
+  const cls = active
+    ? `${base} bg-brand-pink/20 text-brand-pink border border-brand-pink/30 shadow-sm`
+    : `${base} text-[#8A9CC8] hover:bg-white/10 hover:text-white`;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        {href ? (
+          <Link href={href} className={cls}>
+            <Icon size={18} />
+            {active && (
+              <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-brand-pink rounded-r-full" />
+            )}
+          </Link>
+        ) : (
+          <button className={cls} onClick={onClick}>
+            <Icon size={18} />
+          </button>
+        )}
+      </TooltipTrigger>
+      <TooltipContent
+        side="right"
+        sideOffset={8}
+        className="text-xs font-semibold bg-slate-900 text-white border border-slate-700 px-2.5 py-1.5 shadow-xl z-[100]"
+      >
+        {label}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+// ─── Collapsible Space Section (Tier 1 Category Space) ────────────────────────
+function SpaceSection({
+  space,
+  pathname,
+  tasks,
+}: {
+  space: any;
+  pathname: string;
+  tasks: any[];
+}) {
+  const [open, setOpen] = useState(true);
+  const spaceHref = `/workspace/space/${space.id}`;
+  const isSpaceActive = pathname === spaceHref || pathname.startsWith(spaceHref + '/');
+
+  return (
+    <div>
+      <div className="flex items-center justify-between px-2 py-1 group">
+        {/* Collapse toggle */}
+        <button
+          onClick={() => setOpen(!open)}
+          className="flex items-center justify-center w-4 h-4 flex-shrink-0 text-[#4A5A82] hover:text-[#8A9CC8] transition-colors"
+          title={open ? 'Collapse' : 'Expand'}
+        >
+          {open ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
+        </button>
+
+        {/* Space name — navigable link */}
+        <Link
+          href={spaceHref}
+          className={`flex-1 min-w-0 ml-1 text-[10px] font-bold uppercase tracking-widest truncate transition-colors ${
+            isSpaceActive
+              ? 'text-brand-pink'
+              : 'text-[#4A5A82] hover:text-[#8A9CC8]'
+          }`}
+        >
+          {space.name}
+        </Link>
+
+        {/* Add List shortcut (PM only) */}
+        <button
+          className="w-4 h-4 rounded hover:bg-white/10 flex items-center justify-center text-[#4A5A82] hover:text-white opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+          title={`Add List to ${space.name}`}
+          onClick={() => {
+            // handled via Space Overview page
+            window.location.href = spaceHref;
+          }}
+        >
+          <Plus size={11} />
+        </button>
+      </div>
+
+      {open && (
+        <div className="mt-0.5 space-y-0.5">
+          {/* Tier 3 Folder-less list channels */}
+          {(space.folderlessLists || []).map((list: any) => {
+            const href = `/workspace/${list.id}`;
+            const isActive = pathname === href;
+            const taskCount = tasks.filter((t) => t.list_id === list.id).length;
+
+            return (
+              <Link
+                key={list.id}
+                href={href}
+                className={`flex items-center justify-between gap-2 pl-4 pr-2 py-[5px] text-[12px] font-medium rounded-md mx-1 transition-all ${
+                  isActive
+                    ? 'bg-brand-purple/20 text-white border border-brand-purple/30 font-semibold'
+                    : 'text-[#8A9CC8] hover:bg-white/5 hover:text-white'
+                }`}
+              >
+                <div className="flex items-center gap-2 overflow-hidden">
+                  <List size={13} className="flex-shrink-0 opacity-70" />
+                  <span className="truncate">{list.name}</span>
+                </div>
+                {taskCount > 0 && (
+                  <span className="text-[10px] font-bold text-[#4A5A82] bg-white/5 px-1.5 py-0.2 rounded-full flex-shrink-0">
+                    {taskCount}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
+
+          {/* Tier 2 Folders */}
+          {(space.folders || []).map((folder: any) => (
+            <FolderSection
+              key={folder.id}
+              folder={folder}
+              pathname={pathname}
+              tasks={tasks}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Collapsible Folder Section (Tier 2 Project Folders) ──────────────────────
+function FolderSection({
+  folder,
+  pathname,
+  tasks,
+}: {
+  folder: any;
+  pathname: string;
+  tasks: any[];
+}) {
+  const [open, setOpen] = useState(false);
+  const folderHref = `/workspace/folder/${folder.id}`;
+  const isFolderActive = pathname === folderHref || pathname.startsWith(folderHref + '/');
+
+  return (
+    <div>
+      <div className="flex items-center gap-1 pl-3 pr-2 py-[5px] mx-1 rounded-md group hover:bg-white/5 transition-all">
+        {/* Collapse toggle */}
+        <button
+          onClick={() => setOpen(!open)}
+          className="flex items-center justify-center w-4 h-4 flex-shrink-0 text-[#4A5A82] hover:text-[#8A9CC8] transition-colors"
+          title={open ? 'Collapse' : 'Expand'}
+        >
+          {open ? <ChevronDown size={12} className="opacity-70" /> : <ChevronRight size={12} className="opacity-70" />}
+        </button>
+
+        <Folder size={13} className="flex-shrink-0 opacity-70 text-brand-pink ml-0.5" />
+
+        {/* Folder name — navigable link */}
+        <Link
+          href={folderHref}
+          className={`flex-1 min-w-0 ml-1 text-[12px] font-medium truncate transition-colors ${
+            isFolderActive ? 'text-white font-semibold' : 'text-[#8A9CC8] hover:text-white'
+          }`}
+        >
+          {folder.name}
+        </Link>
+      </div>
+
+      {open && (
+        <div className="space-y-0.5">
+          {/* Tier 3 List channels in Folder */}
+          {(folder.lists || []).map((list: any) => {
+            const href = `/workspace/${list.id}`;
+            const isActive = pathname === href;
+            const taskCount = tasks.filter((t) => t.list_id === list.id).length;
+
+            return (
+              <Link
+                key={list.id}
+                href={href}
+                className={`flex items-center justify-between gap-2 pl-8 pr-2 py-[5px] text-[11.5px] font-medium rounded-md mx-1 transition-all ${
+                  isActive
+                    ? 'bg-brand-purple/20 text-white border border-brand-purple/30 font-semibold'
+                    : 'text-[#8A9CC8] hover:bg-white/5 hover:text-white'
+                }`}
+              >
+                <div className="flex items-center gap-2 overflow-hidden">
+                  <ListTodo size={12} className="flex-shrink-0 opacity-60" />
+                  <span className="truncate">{list.name}</span>
+                </div>
+                {taskCount > 0 && (
+                  <span className="text-[10px] font-bold text-[#4A5A82] bg-white/5 px-1.5 py-0.2 rounded-full flex-shrink-0">
+                    {taskCount}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main Sidebar Export ──────────────────────────────────────────────────────
+export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () => void }) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const { teams, selectedTeamId } = useClickUp();
-  const { spaces } = useWorkspace();
+  const { spaces, tasks, members } = useWorkspace();
 
-  const selectedTeam = teams.find(t => t.id === selectedTeamId);
+  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [drawerOpen, setDrawerOpen] = useState(true);
+
   const role = user?.role || 'staff';
+  const selectedTeam = teams.find((t) => t.id === selectedTeamId);
 
-  // ── Collect all lists from workspace hierarchy ─────────────────────────────
-  // For Staff: these are the "projects" they can navigate to
-  const allLists: { id: string; name: string; color: string }[] = [];
-  for (const space of (spaces || [])) {
-    for (const list of (space.folderlessLists || [])) {
-      allLists.push({ id: list.id, name: list.name, color: list.color || space.color || '#FF3396' });
+  // Find user's profile display name
+  const myProfile = members.find((m: any) => m.email === user?.email);
+  const displayName = myProfile?.full_name || (user?.email ? user.email.split('@')[0] : 'User');
+
+  // Sync theme state
+  useEffect(() => {
+    const saved = localStorage.getItem('theme-mode');
+    setIsDarkMode(saved ? saved === 'dark' : true);
+  }, []);
+
+  const toggleTheme = () => {
+    const next = !isDarkMode;
+    setIsDarkMode(next);
+    localStorage.setItem('theme-mode', next ? 'dark' : 'light');
+    if (next) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
     }
-    for (const folder of (space.folders || [])) {
-      for (const list of (folder.lists || [])) {
-        allLists.push({ id: list.id, name: list.name, color: list.color || space.color || '#FF3396' });
+  };
+
+  // ── Collect all assigned lists for staff ─────────────────────────────────
+  const allLists: { id: string; name: string; spaceName: string; color: string }[] = [];
+  for (const space of spaces || []) {
+    for (const list of space.folderlessLists || []) {
+      allLists.push({
+        id: list.id,
+        name: list.name,
+        spaceName: space.name,
+        color: list.color || space.color || '#FF3396',
+      });
+    }
+    for (const folder of space.folders || []) {
+      for (const list of folder.lists || []) {
+        allLists.push({
+          id: list.id,
+          name: list.name,
+          spaceName: space.name,
+          color: list.color || space.color || '#FF3396',
+        });
       }
     }
   }
 
-  const renderNavLink = (item: { name: string; href: string; icon: any }) => {
-    const isActive = item.href === '/'
-      ? pathname === '/'
-      : pathname === item.href || pathname.startsWith(item.href + '/');
-    const Icon = item.icon;
-    return (
-      <Link
-        key={item.name}
-        href={item.href}
-        className={`
-          flex items-center p-2 rounded-lg transition-colors duration-150 group
-          ${isActive 
-            ? 'bg-brand-pink/10 text-brand-pink' 
-            : 'text-secondary hover:bg-elevated hover:text-primary'
-          }
-        `}
-      >
-        <Icon size={20} className={isActive ? 'text-brand-pink' : 'text-secondary group-hover:text-primary'} />
-        {!isCollapsed && (
-          <span className="ml-3 text-body font-medium truncate">{item.name}</span>
-        )}
-      </Link>
-    );
-  };
+  // ── Section 1: Far-Left Control Rail Items (Fixed Ultra-Thin Strip) ───────
+  const staffRailItems: NavItem[] = [
+    { name: 'Home', href: '/', icon: Home },
+    { name: 'My Tasks', href: '/mytasks', icon: CheckSquare },
+    { name: 'Projects & Tasks', href: '/workspace', icon: FolderOpen },
+    { name: 'Project Health', href: '/projects', icon: FolderKanban },
+    { name: 'Calendar', href: '/calendar', icon: Calendar },
+    { name: 'Settings', href: '/settings', icon: Settings },
+  ];
+
+  const pmRailItems: NavItem[] = [
+    { name: 'Home', href: '/', icon: Home },
+    { name: 'My Tasks', href: '/mytasks', icon: CheckSquare },
+    { name: 'Dashboards', href: '/', icon: LayoutDashboard },
+    { name: 'Projects & Spaces', href: '/workspace', icon: FolderOpen },
+    { name: 'Project Health', href: '/projects', icon: FolderKanban },
+    { name: 'Team Performance', href: '/team', icon: Users },
+    { name: 'Reporting Center', href: '/reporting', icon: ClipboardList },
+    { name: 'Calendar', href: '/calendar', icon: Calendar },
+    { name: 'Team Members', href: '/members', icon: UserCheck },
+    { name: 'Settings', href: '/settings', icon: Settings },
+  ];
+
+  const stakeholderRailItems: NavItem[] = [
+    { name: 'Home / Overview', href: '/', icon: Home },
+    { name: 'Reporting Center', href: '/reporting', icon: ClipboardList },
+    { name: 'Project Health', href: '/projects', icon: FolderKanban },
+    { name: 'Team Performance', href: '/team', icon: Users },
+    { name: 'Settings', href: '/settings', icon: Settings },
+  ];
+
+  const railItems =
+    role === 'staff'
+      ? staffRailItems
+      : role === 'product_manager'
+      ? pmRailItems
+      : stakeholderRailItems;
+
+  const isNavActive = (href: string) =>
+    href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(href + '/');
 
   return (
     <>
       {/* Mobile Overlay */}
       {isOpen && (
-        <div 
-          className="fixed inset-0 bg-slate-950/50 backdrop-blur-sm z-[60] lg:hidden"
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] lg:hidden"
           onClick={onClose}
         />
       )}
 
-      <aside 
+      {/* ── 2-PANEL SIDEBAR ARCHITECTURE (ClickUp Pattern) ── */}
+      <aside
         className={`
-          flex flex-col bg-secondary border-r border-slate-700/20 transition-all duration-300 ease-in-out
-          fixed inset-y-0 left-0 z-[70] lg:relative
+          flex h-full flex-shrink-0 transition-transform duration-300 ease-in-out
+          fixed inset-y-0 left-0 z-[70] lg:relative lg:translate-x-0
           ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-          ${isCollapsed ? 'lg:w-16' : 'lg:w-60 w-64'}
         `}
+        style={{ display: 'flex', flexDirection: 'row' }}
       >
-
-      {/* Logo Area */}
-      <div className="h-14 flex items-center px-4 border-b border-slate-700/10">
-        <img 
-          src="/brand/White.png" 
-          alt="TM Labs Logo" 
-          className="w-8 h-8 object-contain flex-shrink-0" 
-        />
-        {!isCollapsed && (
-          <span className="ml-3 font-display font-bold text-lg text-primary truncate">
-            TM Labs
-          </span>
-        )}
-      </div>
-
-      {/* Navigation Items */}
-      <nav className="flex-1 py-4 px-2 overflow-y-auto space-y-1">
-
-        {/* ── STAFF ── */}
-        {role === 'staff' && (
-          <>
-            {renderNavLink({ name: 'My Tasks', href: '/mytasks', icon: CheckSquare })}
-            {renderNavLink({ name: 'Calendar', href: '/calendar', icon: Calendar })}
-
-            {/* Assigned Projects */}
-            {allLists.length > 0 && (
-              <>
-                {!isCollapsed && (
-                  <p className="text-[10px] text-muted uppercase tracking-widest font-bold pt-4 pb-1 px-2">
-                    My Projects
-                  </p>
-                )}
-                {isCollapsed && <div className="border-t border-slate-700/20 my-2" />}
-                {allLists.map(list => {
-                  const href = `/workspace/${list.id}`;
-                  const isActive = pathname === href;
-                  return (
-                    <Link
-                      key={list.id}
-                      href={href}
-                      title={list.name}
-                      className={`
-                        flex items-center p-2 rounded-lg transition-colors duration-150 group text-caption font-medium
-                        ${isActive
-                          ? 'bg-brand-pink/10 text-brand-pink'
-                          : 'text-secondary hover:bg-elevated hover:text-primary'
-                        }
-                      `}
-                    >
-                      <span
-                        className="w-[18px] h-[18px] rounded-sm flex-shrink-0 flex items-center justify-center"
-                        style={{ background: `${list.color}22`, border: `1.5px solid ${list.color}55` }}
-                      >
-                        <ListTodo size={11} style={{ color: list.color }} />
-                      </span>
-                      {!isCollapsed && (
-                        <span className="ml-3 truncate">{list.name}</span>
-                      )}
-                    </Link>
-                  );
-                })}
-              </>
-            )}
-          </>
-        )}
-
-        {/* ── STAKEHOLDER ── */}
-        {role === 'stakeholder' && (
-          <>
-            {renderNavLink({ name: 'Overview', href: '/', icon: LayoutDashboard })}
-            {renderNavLink({ name: 'Reporting Center', href: '/reporting', icon: ClipboardList })}
-            {renderNavLink({ name: 'Project Health', href: '/projects', icon: FolderKanban })}
-            {renderNavLink({ name: 'Team Performance', href: '/team', icon: Users })}
-          </>
-        )}
-
-        {/* ── PRODUCT MANAGER ── */}
-        {role === 'product_manager' && (
-          <>
-            {renderNavLink({ name: 'Dashboard', href: '/', icon: LayoutDashboard })}
-            {renderNavLink({ name: 'My Tasks', href: '/mytasks', icon: CheckSquare })}
-            {renderNavLink({ name: 'Workspace', href: '/workspace', icon: FolderOpen })}
-            {renderNavLink({ name: 'Calendar', href: '/calendar', icon: Calendar })}
-            {renderNavLink({ name: 'Team Members', href: '/members', icon: Users })}
-            {renderNavLink({ name: 'Reporting Center', href: '/reporting', icon: ClipboardList })}
-            {renderNavLink({ name: 'Team Performance', href: '/team', icon: Users })}
-            {renderNavLink({ name: 'Project Health', href: '/projects', icon: FolderKanban })}
-          </>
-        )}
-
-      </nav>
-
-      {/* Footer / User Profile Area */}
-      <div className="p-2 border-t border-slate-700/10 space-y-1">
-        {!isCollapsed && selectedTeam?.name && (
-          <div className="mb-2 px-2 py-2 rounded-lg bg-elevated/40 border border-slate-700/10">
-            <div className="text-[10px] text-muted uppercase tracking-widest font-bold mb-1">Workspace</div>
-            <div className="text-caption font-semibold text-primary truncate">
-              {selectedTeam.name}
-            </div>
-          </div>
-        )}
-
-        {!isCollapsed && user && (
-          <div className="mb-2 px-2 py-2 rounded-lg bg-elevated/40 border border-slate-700/10 flex items-center gap-2 overflow-hidden">
-            <div className="w-8 h-8 rounded-full bg-brand-pink/20 text-brand-pink flex items-center justify-center font-bold text-sm uppercase flex-shrink-0">
-              {user.email[0]}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-[10px] text-muted uppercase tracking-widest font-bold">
-                {role.replace('_', ' ')}
-              </div>
-              <div className="text-caption font-semibold text-primary truncate" title={user.email}>
-                {user.email}
-              </div>
-            </div>
-          </div>
-        )}
-        
-        {renderNavLink({ name: 'Settings', href: '/settings', icon: Settings })}
-
-        {/* Notification Bell (staff + PM only) */}
-        {role !== 'stakeholder' && (
-          <NotificationBell isCollapsed={isCollapsed} />
-        )}
-
-        <button
-          onClick={async () => {
-            if (confirm('Are you sure you want to logout?')) {
-              await logout();
-            }
+        {/* ══ PANEL 1: FAR-LEFT CONTROL RAIL (Fixed Ultra-Thin ~52px Strip) ══ */}
+        <div
+          className="flex flex-col items-center py-3 gap-1 flex-shrink-0"
+          style={{
+            width: '52px',
+            background: 'var(--cu-icon-rail, #0B1428)',
+            borderRight: '1px solid rgba(255,255,255,0.08)',
           }}
-          className="w-full flex items-center p-2 rounded-lg text-secondary hover:bg-red-500/10 hover:text-red-500 transition-colors group"
         >
-          <LogOut size={20} className="group-hover:text-red-500" />
-          {!isCollapsed && <span className="ml-3 text-body font-medium">Logout</span>}
-        </button>
+          {/* Logo */}
+          <div className="mb-3 flex items-center justify-center w-9 h-9">
+            <img src="/brand/White.png" alt="TM Labs" className="w-7 h-7 object-contain" />
+          </div>
 
-        <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="w-full flex items-center p-2 rounded-lg text-secondary hover:bg-elevated hover:text-primary transition-colors"
-        >
-          {isCollapsed ? <ChevronRight size={20} /> : (
-            <>
-              <ChevronLeft size={20} />
-              <span className="ml-3 text-body font-medium">Collapse</span>
-            </>
+          <div className="w-full px-1.5 flex flex-col items-center gap-1">
+            {railItems.map((item) => (
+              <RailIcon
+                key={item.href}
+                href={item.href}
+                icon={item.icon}
+                label={item.name}
+                active={isNavActive(item.href)}
+              />
+            ))}
+          </div>
+
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* Notification Bell */}
+          {role !== 'stakeholder' && (
+            <div className="px-1.5 mb-1">
+              <NotificationBell isCollapsed={true} />
+            </div>
           )}
-        </button>
-      </div>
-    </aside>
+
+          {/* Theme Switcher Button */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={toggleTheme}
+                className="w-9 h-9 flex items-center justify-center rounded-lg text-[#8A9CC8] hover:bg-white/10 hover:text-white transition-all cursor-pointer"
+              >
+                {isDarkMode ? <Sun size={17} /> : <Moon size={17} />}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent
+              side="right"
+              sideOffset={8}
+              className="text-xs font-semibold bg-slate-900 text-white border border-slate-700 px-2.5 py-1.5 z-[100]"
+            >
+              {isDarkMode ? 'Light mode' : 'Dark mode'}
+            </TooltipContent>
+          </Tooltip>
+
+          {/* User Profile Avatar with Floating Hover Tooltip */}
+          {user && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={async () => {
+                    if (confirm('Are you sure you want to logout?')) await logout();
+                  }}
+                  className="w-9 h-9 rounded-full bg-brand-pink/20 text-brand-pink border border-brand-pink/30 flex items-center justify-center font-bold text-sm uppercase hover:bg-red-500/20 hover:text-red-400 transition-all cursor-pointer mb-1 flex-shrink-0"
+                >
+                  {user.email[0]}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent
+                side="right"
+                sideOffset={8}
+                className="text-xs font-medium bg-slate-900 text-white border border-slate-700 p-2.5 space-y-1 z-[100]"
+              >
+                <div className="font-bold text-white text-[13px]">{displayName}</div>
+                <div className="text-[11px] text-brand-pink font-semibold uppercase tracking-wider">
+                  {role.replace('_', ' ')}
+                </div>
+                <div className="text-[10px] text-slate-400">{user.email}</div>
+                <div className="text-[10px] text-red-400 pt-1 border-t border-slate-800">
+                  Click to logout
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+
+        {/* ══ PANEL 2: SECONDARY SPACES & PROJECTS PANEL (Left Drawer) ═══════ */}
+        {drawerOpen && (
+          <div
+            className="flex flex-col h-full overflow-hidden flex-shrink-0"
+            style={{
+              width: '220px',
+              background: 'var(--bg-secondary, #1A2847)',
+              borderRight: '1px solid rgba(255,255,255,0.08)',
+            }}
+          >
+            {/* Drawer Header: "Spaces" Title + Explicit "+" Creation Trigger */}
+            <div className="h-[52px] flex items-center justify-between px-3 flex-shrink-0 border-b border-white/5">
+              <div className="flex items-center gap-2">
+                <span className="text-[13px] font-bold text-white uppercase tracking-wider">
+                  Spaces
+                </span>
+                <span className="text-[10px] font-semibold text-[#4A5A82] bg-white/5 px-1.5 py-0.2 rounded">
+                  {(spaces || []).length}
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => {
+                    const name = prompt('Create new Space name:');
+                    if (name) alert(`Space creation triggered: ${name}`);
+                  }}
+                  className="w-5 h-5 flex items-center justify-center rounded text-[#8A9CC8] hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                  title="Create new Space (+)"
+                >
+                  <Plus size={14} />
+                </button>
+                <button
+                  onClick={() => setDrawerOpen(false)}
+                  className="w-5 h-5 flex items-center justify-center rounded text-[#8A9CC8] hover:text-white transition-colors cursor-pointer"
+                  title="Collapse drawer"
+                >
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+            </div>
+
+            {/* Drawer Hierarchy Content */}
+            <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-4 scrollbar-thin">
+              {/* ── Quick Access Views ── */}
+              <div>
+                <p className="text-[10px] font-bold text-[#4A5A82] uppercase tracking-widest px-2 mb-1">
+                  Quick Views
+                </p>
+                <div className="space-y-0.5">
+                  <Link
+                    href="/mytasks"
+                    className={`flex items-center justify-between px-2 py-1.5 text-[12px] font-medium rounded-md transition-all ${
+                      pathname === '/mytasks'
+                        ? 'bg-brand-pink/15 text-brand-pink font-semibold border border-brand-pink/30'
+                        : 'text-[#8A9CC8] hover:bg-white/5 hover:text-white'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <CheckSquare size={14} className="text-brand-pink" />
+                      <span>My Tasks</span>
+                    </div>
+                  </Link>
+
+                  <Link
+                    href="/workspace"
+                    className={`flex items-center justify-between px-2 py-1.5 text-[12px] font-medium rounded-md transition-all ${
+                      pathname === '/workspace'
+                        ? 'bg-brand-pink/15 text-brand-pink font-semibold border border-brand-pink/30'
+                        : 'text-[#8A9CC8] hover:bg-white/5 hover:text-white'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <FolderOpen size={14} />
+                      <span>All Workspace Tasks</span>
+                    </div>
+                  </Link>
+                </div>
+              </div>
+
+              {/* ── STAFF: Assigned Projects ── */}
+              {role === 'staff' && (
+                <div>
+                  <p className="text-[10px] font-bold text-[#4A5A82] uppercase tracking-widest px-2 mb-1.5">
+                    Assigned Projects
+                  </p>
+                  {allLists.length > 0 ? (
+                    <div className="space-y-0.5">
+                      {allLists.map((list) => {
+                        const href = `/workspace/${list.id}`;
+                        const isActive = pathname === href || pathname.startsWith(href);
+                        const taskCount = tasks.filter((t) => t.list_id === list.id).length;
+
+                        return (
+                          <Link
+                            key={list.id}
+                            href={href}
+                            className={`flex items-center justify-between px-2 py-[5px] text-[12px] font-medium rounded-md transition-all ${
+                              isActive
+                                ? 'bg-brand-purple/20 text-white border border-brand-purple/30 font-semibold'
+                                : 'text-[#8A9CC8] hover:bg-white/5 hover:text-white'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 overflow-hidden">
+                              <span
+                                className="w-3.5 h-3.5 rounded-sm flex-shrink-0"
+                                style={{
+                                  background: `${list.color}28`,
+                                  border: `1px solid ${list.color}55`,
+                                }}
+                              />
+                              <span className="truncate">{list.name}</span>
+                            </div>
+                            {taskCount > 0 && (
+                              <span className="text-[10px] font-bold text-[#4A5A82] bg-white/5 px-1.5 py-0.2 rounded-full">
+                                {taskCount}
+                              </span>
+                            )}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="px-2 text-[11px] text-[#4A5A82] italic">
+                      No projects assigned yet.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* ── PM / ADMIN: Tiered Spaces & Projects Hierarchy ── */}
+              {(role === 'product_manager' || role === 'stakeholder') && (
+                <div>
+                  <div className="flex items-center justify-between px-2 mb-1.5">
+                    <p className="text-[10px] font-bold text-[#4A5A82] uppercase tracking-widest">
+                      Spaces & Folders
+                    </p>
+                  </div>
+                  <div className="space-y-3">
+                    {(spaces || []).map((space: any) => (
+                      <SpaceSection
+                        key={space.id}
+                        space={space}
+                        pathname={pathname}
+                        tasks={tasks}
+                      />
+                    ))}
+                    {(spaces || []).length === 0 && (
+                      <p className="px-2 text-[11px] text-[#4A5A82] italic">
+                        Loading workspace spaces...
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </nav>
+          </div>
+        )}
+
+        {/* Drawer re-open tab (when collapsed) */}
+        {!drawerOpen && (
+          <button
+            onClick={() => setDrawerOpen(true)}
+            className="absolute left-[52px] top-1/2 -translate-y-1/2 w-4 h-8 bg-bg-secondary border border-white/10 rounded-r-md flex items-center justify-center text-[#8A9CC8] hover:text-white hover:bg-white/10 transition-all cursor-pointer z-10"
+            title="Expand sidebar drawer"
+          >
+            <ChevronRight size={10} />
+          </button>
+        )}
+      </aside>
     </>
   );
 }

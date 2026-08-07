@@ -56,7 +56,7 @@ export async function GET(
     };
 
     const res = await fetch(`${supabaseUrl}/rest/v1/tasks?id=eq.${taskId}&select=${encodeURIComponent(TASK_SELECT.replace(/\s+/g, ''))}`, {
-      headers,
+      headers: { ...headers, 'Accept': 'application/json' },
       cache: 'no-store'
     });
 
@@ -67,21 +67,37 @@ export async function GET(
       throw new Error(`Supabase query failed: ${res.status} ${await res.text()}`);
     }
 
-    const task = await res.json();
+    const rawResult = await res.json();
+    // Supabase REST returns an array when no Accept: object header is set
+    const task = Array.isArray(rawResult) ? rawResult[0] : rawResult;
 
-    // Staff: verify they are an assignee
+    if (!task) {
+      return NextResponse.json({ error: 'Task not found' }, { status: 404 });
+    }
+
+    // Staff: verify they are an assignee — use both profile ID and email fallback
     if (session.role === 'staff') {
-      const profileRes = await fetch(`${supabaseUrl}/rest/v1/profiles?email=eq.${encodeURIComponent(session.email)}&select=id`, {
-        headers,
-        cache: 'no-store'
-      });
-      if (!profileRes.ok) {
-        throw new Error(`Profiles check failed: ${profileRes.status}`);
+      const profileRes = await fetch(
+        `${supabaseUrl}/rest/v1/profiles?email=eq.${encodeURIComponent(session.email)}&select=id`,
+        { headers, cache: 'no-store' }
+      );
+
+      let staffProfileId: string | null = null;
+      if (profileRes.ok) {
+        const profiles = await profileRes.json();
+        staffProfileId = profiles[0]?.id ?? null;
       }
-      const profiles = await profileRes.json();
-      const profile = profiles[0] || null;
-      const isAssigned = task.assignees?.some((a: any) => a.profile?.id === profile?.id);
-      if (!isAssigned) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+      const isAssigned = task.assignees?.some((a: any) => {
+        // Match by profile ID (primary) or by email fallback
+        if (staffProfileId && a.profile?.id === staffProfileId) return true;
+        if (a.profile?.email && a.profile.email.toLowerCase() === session.email.toLowerCase()) return true;
+        return false;
+      });
+
+      if (!isAssigned) {
+        return NextResponse.json({ error: 'Forbidden', message: 'You are not assigned to this task.' }, { status: 403 });
+      }
     }
 
     return NextResponse.json(task);

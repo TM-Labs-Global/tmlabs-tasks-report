@@ -50,20 +50,27 @@ export function TaskDetailPanel({
 
   const [task, setTask] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [errorState, setErrorState] = useState<{ code: number; message: string } | null>(null);
   const [commentText, setCommentText] = useState('');
   const [newSubtaskName, setNewSubtaskName] = useState('');
   const [addingSubtask, setAddingSubtask] = useState(false);
 
   // Fetch full task details
   const fetchTaskDetails = async () => {
+    setLoading(true);
+    setErrorState(null);
     try {
       const res = await fetch(`/api/tasks/${taskId}`);
       if (res.ok) {
         const data = await res.json();
         setTask(data);
+      } else {
+        const errBody = await res.json().catch(() => ({}));
+        setErrorState({ code: res.status, message: errBody.message || errBody.error || 'Unknown error' });
       }
     } catch (err) {
       console.error(err);
+      setErrorState({ code: 500, message: 'A network error occurred.' });
     } finally {
       setLoading(false);
     }
@@ -88,17 +95,45 @@ export function TaskDetailPanel({
     );
   }
 
+  if (errorState) {
+    const is403 = errorState.code === 403;
+    return (
+      <SheetContent showCloseButton={false} className="bg-card border-l border-slate-700/20 w-full sm:max-w-2xl p-6 text-primary flex items-center justify-center">
+        <div className="text-center space-y-3 max-w-xs">
+          {is403 ? (
+            <Lock className="mx-auto text-amber-400 w-10 h-10" />
+          ) : (
+            <AlertTriangle className="mx-auto text-brand-pink w-10 h-10" />
+          )}
+          <h3 className="font-bold text-lg">{is403 ? 'Access Restricted' : 'Task Not Found'}</h3>
+          <p className="text-caption text-secondary">
+            {is403
+              ? 'You are not assigned to this task and cannot view its details.'
+              : 'This task could not be loaded or may have been deleted.'}
+          </p>
+          <button
+            onClick={onClose}
+            className="mt-2 px-4 py-2 bg-elevated hover:bg-elevated/80 rounded-xl text-caption font-semibold text-primary transition-colors cursor-pointer"
+          >
+            Close
+          </button>
+        </div>
+      </SheetContent>
+    );
+  }
+
   if (!task) {
     return (
       <SheetContent showCloseButton={false} className="bg-card border-l border-slate-700/20 w-full sm:max-w-2xl p-6 text-primary flex items-center justify-center">
         <div className="text-center space-y-2">
           <AlertTriangle className="mx-auto text-brand-pink w-10 h-10" />
           <h3 className="font-bold text-lg">Task Not Found</h3>
-          <p className="text-caption text-secondary">This task could not be loaded or you don't have permission to view it.</p>
+          <p className="text-caption text-secondary">This task could not be loaded or you don&apos;t have permission to view it.</p>
         </div>
       </SheetContent>
     );
   }
+
 
   const isPM = role === 'product_manager';
   const myProfile = members.find(m => m.email === user?.email);

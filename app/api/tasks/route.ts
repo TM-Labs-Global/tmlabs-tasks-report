@@ -82,10 +82,18 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const {
-      list_id, name, description, status_id, priority,
+      list_id, name, description, status_id, priority = 'normal',
       start_date, due_date, time_estimate, parent_task_id,
-      assignee_ids = [], tag_ids = []
+      assignee_ids, assigneeId, assignee_id, tag_ids = []
     } = body;
+
+    const finalAssigneeIds = Array.isArray(assignee_ids)
+      ? assignee_ids
+      : assigneeId
+      ? [assigneeId]
+      : assignee_id
+      ? [assignee_id]
+      : [];
 
     if (!list_id || !name) {
       return NextResponse.json({ error: 'list_id and name are required' }, { status: 400 });
@@ -117,9 +125,9 @@ export async function POST(request: Request) {
 
     if (taskErr) throw taskErr;
 
-    if (assignee_ids.length > 0) {
+    if (finalAssigneeIds.length > 0) {
       await supabaseAdmin.from('task_assignees').insert(
-        assignee_ids.map((uid: string) => ({
+        finalAssigneeIds.map((uid: string) => ({
           task_id: task.id,
           user_id: uid,
           assigned_by: creator?.id,
@@ -133,9 +141,9 @@ export async function POST(request: Request) {
       );
     }
 
-    if (assignee_ids.length > 0 && creator?.id) {
+    if (finalAssigneeIds.length > 0 && creator?.id) {
       await supabaseAdmin.from('notifications').insert(
-        assignee_ids.map((uid: string) => ({
+        finalAssigneeIds.map((uid: string) => ({
           user_id: uid,
           type: 'assigned',
           task_id: task.id,

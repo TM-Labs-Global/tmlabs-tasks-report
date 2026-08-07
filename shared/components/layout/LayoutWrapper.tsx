@@ -10,7 +10,7 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const pathname = usePathname();
 
-  // Close sidebar on navigation (mobile)
+  // Close mobile sidebar on navigation
   useEffect(() => {
     setIsSidebarOpen(false);
   }, [pathname]);
@@ -21,15 +21,24 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div
+      className="flex h-screen overflow-hidden bg-background"
+      style={{ minWidth: 0 }}
+    >
+      {/* ── Sidebar: icon rail + spaces drawer (combined) ── */}
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
-      
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+
+      {/* ── Main Content Column ── */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Top Bar */}
         <TopBar onMenuClick={() => setIsSidebarOpen(true)} />
+
+        {/* Filter Bar */}
         <FilterBar />
-        
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
-          <div className="max-w-[1600px] mx-auto">
+
+        {/* Page Content */}
+        <main className="flex-1 overflow-y-auto">
+          <div className="w-full h-full px-4 py-4 md:px-6 md:py-5">
             {children}
           </div>
         </main>
