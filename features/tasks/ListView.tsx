@@ -29,11 +29,11 @@ interface ListViewProps {
 }
 
 // ─── Priority helpers (ClickUp standard colors) ────────────────────────────
-const PRIORITY_CONFIG: Record<string, { label: string; color: string; bgColor: string }> = {
-  '1': { label: 'Urgent', color: '#EF4444', bgColor: 'rgba(239,68,68,0.12)' },
-  '2': { label: 'High',   color: '#F59E0B', bgColor: 'rgba(245,158,11,0.12)' },
-  '3': { label: 'Normal', color: '#3B82F6', bgColor: 'rgba(59,130,246,0.12)' },
-  '4': { label: 'Low',    color: '#94A3B8', bgColor: 'rgba(148,163,184,0.12)' },
+const PRIORITY_CONFIG: Record<string, { label: string; color: string; bgColor: string; tooltip: string }> = {
+  '1': { label: 'Urgent', color: '#EF4444', bgColor: 'rgba(239,68,68,0.12)', tooltip: 'Urgent Priority' },
+  '2': { label: 'High',   color: '#F59E0B', bgColor: 'rgba(245,158,11,0.12)', tooltip: 'High Priority' },
+  '3': { label: 'Normal', color: '#3B82F6', bgColor: 'rgba(59,130,246,0.12)', tooltip: 'Normal Priority' },
+  '4': { label: 'Low',    color: '#94A3B8', bgColor: 'rgba(148,163,184,0.12)', tooltip: 'Low Priority / No Priority' },
 };
 
 function getPriorityConfig(priority: number | string | null) {
@@ -236,14 +236,17 @@ function TaskRow({
       <div className="cl-task-col cl-task-col--priority">
         {priority ? (
           <span
-            className="cl-priority-chip"
+            className="cl-priority-chip cursor-pointer"
+            title={priority.tooltip}
             style={{ color: priority.color, backgroundColor: priority.bgColor }}
           >
             <Flag size={10} style={{ color: priority.color }} />
             {priority.label}
           </span>
         ) : (
-          <Flag size={14} className="cl-unassigned-icon" />
+          <span title="Low Priority / No Priority" className="cursor-pointer inline-flex items-center">
+            <Flag size={14} className="cl-unassigned-icon" />
+          </span>
         )}
       </div>
 

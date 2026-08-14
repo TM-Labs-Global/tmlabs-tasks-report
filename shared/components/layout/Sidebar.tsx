@@ -330,11 +330,9 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
   const pmRailItems: NavItem[] = [
     { name: 'Home', href: '/', icon: Home },
     { name: 'My Tasks', href: '/mytasks', icon: CheckSquare },
-    { name: 'Dashboards', href: '/', icon: LayoutDashboard },
     { name: 'Projects & Spaces', href: '/workspace', icon: FolderOpen },
     { name: 'Project Health', href: '/projects', icon: FolderKanban },
     { name: 'Team Performance', href: '/team', icon: Users },
-    { name: 'Reporting Center', href: '/reporting', icon: ClipboardList },
     { name: 'Calendar', href: '/calendar', icon: Calendar },
     { name: 'Team Members', href: '/members', icon: UserCheck },
     { name: 'Settings', href: '/settings', icon: Settings },
@@ -342,7 +340,6 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
 
   const stakeholderRailItems: NavItem[] = [
     { name: 'Home / Overview', href: '/', icon: Home },
-    { name: 'Reporting Center', href: '/reporting', icon: ClipboardList },
     { name: 'Project Health', href: '/projects', icon: FolderKanban },
     { name: 'Team Performance', href: '/team', icon: Users },
     { name: 'Settings', href: '/settings', icon: Settings },
@@ -363,7 +360,7 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
       {/* Mobile Overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] lg:hidden"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
           onClick={onClose}
         />
       )}
@@ -372,7 +369,7 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
       <aside
         className={`
           flex h-full flex-shrink-0 transition-transform duration-300 ease-in-out
-          fixed inset-y-0 left-0 z-[70] lg:relative lg:translate-x-0
+          fixed inset-y-0 left-0 z-40 lg:z-30 lg:relative lg:translate-x-0
           ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
         style={{ display: 'flex', flexDirection: 'row' }}
@@ -597,7 +594,7 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
                 <div>
                   <div className="flex items-center justify-between px-2 mb-1.5">
                     <p className="text-[10px] font-bold text-[#4A5A82] uppercase tracking-widest">
-                      Spaces & Folders
+                      Spaces & Projects
                     </p>
                   </div>
                   <div className="space-y-3">

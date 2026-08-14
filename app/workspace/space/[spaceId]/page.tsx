@@ -311,7 +311,7 @@ export default function SpaceOverviewPage() {
               </div>
               <h1 className="text-[22px] font-extrabold text-primary leading-none">{space.name}</h1>
               <p className="text-muted text-[13px] mt-1">
-                {space.folders?.length || 0} folders · {allListIds.length} lists · {totalTasks} tasks
+                {space.folders?.length || 0} projects · {allListIds.length} lists · {totalTasks} tasks
               </p>
             </div>
           </div>
@@ -323,7 +323,7 @@ export default function SpaceOverviewPage() {
                 size="sm"
                 className="bg-brand-purple hover:bg-brand-purple/90 text-white rounded-lg gap-1.5 text-[12px] font-bold shadow-lg shadow-brand-purple/20 cursor-pointer"
               >
-                <FolderPlus size={14} /> New Folder
+                <FolderPlus size={14} /> + Add Project
               </Button>
               <Button
                 onClick={() => setShowCreateList(true)}
@@ -346,13 +346,13 @@ export default function SpaceOverviewPage() {
         <MetricCard label="Overdue" value={overdueTasks} icon={AlertCircle} color="#FF3396" />
       </div>
 
-      {/* ── Folders Grid ── */}
+      {/* ── Projects Grid ── */}
       {(space.folders || []).length > 0 && (
         <section>
           <div className="flex items-center gap-2 mb-3">
             <FolderOpen size={15} className="text-brand-purple" />
             <h2 className="text-[13px] font-bold text-primary uppercase tracking-wide">
-              Folders ({space.folders.length})
+              Projects ({space.folders.length})
             </h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -363,7 +363,7 @@ export default function SpaceOverviewPage() {
         </section>
       )}
 
-      {/* ── Folderless Lists ── */}
+      {/* ── Direct Lists ── */}
       {(space.folderlessLists || []).length > 0 && (
         <section>
           <div className="flex items-center gap-2 mb-3">
@@ -384,7 +384,7 @@ export default function SpaceOverviewPage() {
       {(space.folders || []).length === 0 && (space.folderlessLists || []).length === 0 && (
         <div className="text-center py-16 border border-dashed border-border rounded-2xl">
           <FolderOpen size={36} className="mx-auto text-muted mb-3 opacity-50" />
-          <p className="text-muted font-semibold">This space has no folders or lists yet.</p>
+          <p className="text-muted font-semibold">This space has no projects or lists yet.</p>
           {role === 'product_manager' && (
             <div className="flex items-center justify-center gap-2 mt-4">
               <Button
@@ -392,7 +392,7 @@ export default function SpaceOverviewPage() {
                 size="sm"
                 className="bg-brand-purple hover:bg-brand-purple/90 text-white rounded-lg gap-1.5 text-[12px] cursor-pointer"
               >
-                <FolderPlus size={13} /> Create Folder
+                <FolderPlus size={13} /> + Add Project
               </Button>
               <Button
                 onClick={() => setShowCreateList(true)}
@@ -407,15 +407,15 @@ export default function SpaceOverviewPage() {
         </div>
       )}
 
-      {/* ── Create Folder Modal ── */}
+      {/* ── Create Project Modal ── */}
       <Dialog open={showCreateFolder} onOpenChange={setShowCreateFolder}>
         <DialogContent className="bg-card border border-border text-primary rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-[16px] font-bold">Create Folder in {space.name}</DialogTitle>
+            <DialogTitle className="text-[16px] font-bold">Create Project in {space.name}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleCreateFolder} className="space-y-4 pt-1">
             <div className="space-y-1.5">
-              <Label className="text-[11px] font-semibold text-muted uppercase">Folder Name</Label>
+              <Label className="text-[11px] font-semibold text-muted uppercase">Project Name</Label>
               <Input
                 autoFocus
                 placeholder="e.g. GETLY APP"
@@ -426,7 +426,7 @@ export default function SpaceOverviewPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-[11px] font-semibold text-muted uppercase">Folder Color</Label>
+              <Label className="text-[11px] font-semibold text-muted uppercase">Project Color</Label>
               <div className="flex gap-2 items-center">
                 <input
                   type="color"
@@ -450,7 +450,7 @@ export default function SpaceOverviewPage() {
                 disabled={saving}
                 className="bg-brand-purple hover:bg-brand-purple/90 text-white rounded-xl cursor-pointer font-bold"
               >
-                {saving ? 'Creating…' : 'Create Folder'}
+                {saving ? 'Creating…' : 'Create Project'}
               </Button>
             </DialogFooter>
           </form>

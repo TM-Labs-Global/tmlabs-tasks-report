@@ -48,6 +48,23 @@ export function TaskDetailPanel({
   const { members, refreshData } = useWorkspace();
   const role = user?.role || 'staff';
 
+  const getPriorityLabel = (priority: any) => {
+    const val = String(priority).toLowerCase();
+    if (val === '1' || val === 'urgent') return 'URGENT';
+    if (val === '2' || val === 'high') return 'HIGH';
+    if (val === '3' || val === 'normal') return 'NORMAL';
+    if (val === '4' || val === 'low') return 'LOW';
+    return 'NO PRIORITY';
+  };
+
+  const getPriorityTooltip = (priority: any) => {
+    const val = String(priority).toLowerCase();
+    if (val === '1' || val === 'urgent') return 'Urgent Priority';
+    if (val === '2' || val === 'high') return 'High Priority';
+    if (val === '3' || val === 'normal') return 'Normal Priority';
+    return 'Low Priority / No Priority';
+  };
+
   const [task, setTask] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [errorState, setErrorState] = useState<{ code: number; message: string } | null>(null);
@@ -215,14 +232,6 @@ export function TaskDetailPanel({
     }
   };
 
-  const getPriorityLabel = (priority: string | null) => {
-    if (priority === 'urgent') return 'Urgent';
-    if (priority === 'high') return 'High';
-    if (priority === 'normal') return 'Normal';
-    if (priority === 'low') return 'Low';
-    return 'No Priority';
-  };
-
   // ── Assignee helpers ──────────────────────────────────────────────────────
   const currentAssigneeIds: string[] = (task.assignees || [])
     .map((a: any) => a.profile?.id)
@@ -305,7 +314,7 @@ export function TaskDetailPanel({
               {canEditAll ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start h-9 rounded-xl border-slate-700/50 bg-secondary/30 text-caption font-semibold cursor-pointer">
+                    <Button variant="outline" title={getPriorityTooltip ? getPriorityTooltip(task.priority) : 'Priority'} className="w-full justify-start h-9 rounded-xl border-slate-700/50 bg-secondary/30 text-caption font-semibold cursor-pointer">
                       {getPriorityLabel(task.priority)}
                     </Button>
                   </DropdownMenuTrigger>
@@ -315,6 +324,7 @@ export function TaskDetailPanel({
                         key={p} 
                         onClick={() => handleFieldUpdate({ priority: p })}
                         className="cursor-pointer text-caption font-medium hover:bg-elevated"
+                        title={p === 'urgent' ? 'Urgent Priority' : p === 'high' ? 'High Priority' : p === 'normal' ? 'Normal Priority' : 'Low Priority / No Priority'}
                       >
                         {p.toUpperCase()}
                       </DropdownMenuItem>
@@ -322,7 +332,7 @@ export function TaskDetailPanel({
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <div className="flex items-center h-9 px-3 bg-secondary/30 border border-slate-700/10 rounded-xl text-caption font-semibold">
+                <div title={getPriorityTooltip ? getPriorityTooltip(task.priority) : 'Priority'} className="flex items-center h-9 px-3 bg-secondary/30 border border-slate-700/10 rounded-xl text-caption font-semibold cursor-pointer">
                   {getPriorityLabel(task.priority)}
                 </div>
               )}

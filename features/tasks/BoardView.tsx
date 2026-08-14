@@ -59,6 +59,13 @@ export function BoardView({
     return 'No Priority';
   };
 
+  const getPriorityTooltip = (priority: number | null) => {
+    if (priority === 1) return 'Urgent Priority';
+    if (priority === 2) return 'High Priority';
+    if (priority === 3) return 'Normal Priority';
+    return 'Low Priority / No Priority';
+  };
+
   const getPriorityBadgeClass = (priority: number | null) => {
     if (priority === 1) return 'bg-red-500/10 text-red-500 border-red-500/20';
     if (priority === 2) return 'bg-orange-500/10 text-orange-500 border-orange-500/20';
@@ -148,7 +155,7 @@ export function BoardView({
                                 <div className="flex items-center gap-2">
                                   {/* Priority badge */}
                                   {task.priority && (
-                                    <Badge variant="outline" className={`text-[9px] px-1.5 py-0.2 rounded-md font-bold ${getPriorityBadgeClass(task.priority)}`}>
+                                    <Badge variant="outline" title={getPriorityTooltip(task.priority)} className={`text-[9px] px-1.5 py-0.2 rounded-md font-bold cursor-pointer ${getPriorityBadgeClass(task.priority)}`}>
                                       {getPriorityLabel(task.priority)}
                                     </Badge>
                                   )}

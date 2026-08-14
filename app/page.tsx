@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useClickUp } from '@/shared/context/ClickUpContext';
 import { useFilteredTasks } from '@/shared/hooks/useFilteredTasks';
+import { useFilters } from '@/shared/context/FilterContext';
 import { MetricCard } from '@/shared/components/cards/MetricCard';
 import { TaskTable } from '@/shared/components/tables/TaskTable';
 import { BarChart } from '@/shared/components/charts/BarChart';
@@ -19,17 +20,81 @@ import {
   AlertCircle, 
   TrendingUp, 
   Users, 
-  Loader2 
+  Loader2,
+  CalendarDays,
+  CalendarRange,
+  Layers,
+  History,
+  ChevronLeft,
+  ChevronRight,
+  FileSpreadsheet
 } from 'lucide-react';
 import { SetupScreen } from '@/shared/components/ui/SetupScreen';
 import { MetricTasksModal } from '@/shared/components/modals/MetricTasksModal';
+import { ExportModal } from '@/shared/components/modals/ExportModal';
+import { generateStyledReport } from '@/shared/utils/excelReport';
+import { Button } from '@/shared/components/ui/button';
+
+type Tab = 'weekly' | 'monthly' | 'quarterly' | 'all';
 
 export default function Home() {
   const { members, isLoading, error, isConfigured } = useClickUp();
   const tasks = useFilteredTasks();
+  const { filters, setFilters } = useFilters();
 
-  // --- Selected Metric Modal State ---
-  const [selectedMetric, setSelectedMetric] = React.useState<{ title: string; tasks: any[] } | null>(null);
+  const [activeTab, setActiveTab] = useState<Tab>('all');
+  const [offset, setOffset] = useState(0); 
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [selectedMetric, setSelectedMetric] = useState<{ title: string; tasks: any[] } | null>(null);
+
+  const updatePeriodRange = (tab: Tab, currentOffset: number) => {
+    if (tab === 'all') {
+      setFilters(prev => ({ ...prev, startDate: null, endDate: null }));
+      return;
+    }
+    const now = new Date();
+    let startStr: string | null = null;
+    let endStr: string | null = null;
+    
+    if (tab === 'weekly') {
+      const d = new Date(now);
+      const day = d.getDay();
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+      const start = new Date(d.setDate(diff + (currentOffset * 7)));
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(start);
+      end.setDate(end.getDate() + 6);
+      end.setHours(23, 59, 59, 999);
+      startStr = start.toISOString();
+      endStr = end.toISOString();
+    } else if (tab === 'monthly') {
+      const start = new Date(now.getFullYear(), now.getMonth() + currentOffset, 1, 0, 0, 0, 0);
+      const end = new Date(now.getFullYear(), now.getMonth() + currentOffset + 1, 0, 23, 59, 59, 999);
+      startStr = start.toISOString();
+      endStr = end.toISOString();
+    } else if (tab === 'quarterly') {
+      const currentQuarter = Math.floor(now.getMonth() / 3);
+      const qStartMonth = (currentQuarter + currentOffset) * 3;
+      const start = new Date(now.getFullYear(), qStartMonth, 1, 0, 0, 0, 0);
+      const end = new Date(now.getFullYear(), qStartMonth + 3, 0, 23, 59, 59, 999);
+      startStr = start.toISOString();
+      endStr = end.toISOString();
+    }
+
+    setFilters(prev => ({ ...prev, startDate: startStr, endDate: endStr }));
+  };
+
+  const handleTabChange = (newTab: Tab) => {
+    setActiveTab(newTab);
+    setOffset(0);
+    updatePeriodRange(newTab, 0);
+  };
+
+  const handleOffsetChange = (updater: number | ((prev: number) => number)) => {
+    const newOffset = typeof updater === 'function' ? updater(offset) : updater;
+    setOffset(newOffset);
+    updatePeriodRange(activeTab, newOffset);
+  };
 
   if (isLoading) {
     return (
@@ -166,6 +231,69 @@ export default function Home() {
 
   return (
     <div className="space-y-8 pb-12">
+      {/* ── Unified Period & Export Control Bar ── */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-card p-4 rounded-xl border border-slate-700/20 shadow-sm">
+        {/* Period Tabs */}
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+          {[
+            { id: 'all', label: 'All Tasks', icon: History },
+            { id: 'weekly', label: 'Weekly', icon: CalendarDays },
+            { id: 'monthly', label: 'Monthly', icon: CalendarRange },
+            { id: 'quarterly', label: 'Quarterly', icon: Layers },
+          ].map(tab => (
+            <button 
+              key={tab.id}
+              onClick={() => handleTabChange(tab.id as Tab)}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                activeTab === tab.id 
+                  ? 'bg-brand-pink/20 text-brand-pink border border-brand-pink/30' 
+                  : 'text-secondary hover:text-primary hover:bg-white/5'
+              }`}
+            >
+              <tab.icon size={14} />
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Date Offset Controls & Export Button */}
+        <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+          {activeTab !== 'all' && (
+            <div className="flex items-center bg-elevated border border-slate-700/20 rounded-lg overflow-hidden shadow-sm">
+              <button 
+                onClick={() => handleOffsetChange(o => o - 1)}
+                className="p-1.5 hover:bg-white/10 text-secondary hover:text-primary transition-colors cursor-pointer"
+                title="Previous period"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <div className="px-3 py-1 text-xs font-bold text-primary min-w-[120px] text-center">
+                {activeTab === 'weekly' && filters.startDate ? `Week of ${new Date(filters.startDate).toLocaleDateString()}` :
+                 activeTab === 'monthly' && filters.startDate ? new Date(filters.startDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) :
+                 activeTab === 'quarterly' && filters.startDate ? `Q${Math.floor(new Date(filters.startDate).getMonth() / 3) + 1} ${new Date(filters.startDate).getFullYear()}` :
+                 'Period View'}
+              </div>
+              <button 
+                onClick={() => handleOffsetChange(o => o + 1)}
+                className="p-1.5 hover:bg-white/10 text-secondary hover:text-primary transition-colors cursor-pointer"
+                title="Next period"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          )}
+
+          <Button 
+            variant="primary" 
+            className="gap-2 bg-brand-pink hover:bg-brand-pink/90 text-white rounded-lg text-xs font-bold shadow-md shadow-brand-pink/20 cursor-pointer" 
+            onClick={() => setIsExportModalOpen(true)}
+          >
+            <FileSpreadsheet size={15} />
+            Download Report
+          </Button>
+        </div>
+      </div>
+
       {/* KPI Grid - Row 1 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard label="Total Tasks" value={totalTasks} color="kpi-blue" icon={FileText} onClick={() => setSelectedMetric({ title: 'Total Tasks', tasks })} />
@@ -293,6 +421,20 @@ export default function Home() {
           tasks={selectedMetric.tasks}
         />
       )}
+
+      {/* Report Export Modal */}
+      <ExportModal 
+        isOpen={isExportModalOpen} 
+        onClose={() => setIsExportModalOpen(false)}
+        onExport={(type, showAssignee) => {
+          const startObj = filters.startDate ? new Date(filters.startDate) : new Date(0);
+          const endObj = filters.endDate ? new Date(filters.endDate) : new Date();
+          const periodLabel = activeTab === 'all' ? 'All Workspace Data' : `Report (${activeTab})`;
+          generateStyledReport(tasks, type, periodLabel, startObj, endObj, showAssignee);
+          setIsExportModalOpen(false);
+        }}
+        currentPeriod={activeTab === 'all' ? 'All Workspace Data' : 'Current Period'}
+      />
     </div>
   );
 }

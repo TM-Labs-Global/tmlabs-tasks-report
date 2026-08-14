@@ -11,6 +11,7 @@ type Step = 'email' | 'otp';
 export default function LoginPage() {
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -108,7 +109,11 @@ export default function LoginPage() {
       const res = await fetch('/api/auth/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.toLowerCase().trim(), code }),
+        body: JSON.stringify({ 
+          email: email.toLowerCase().trim(), 
+          code,
+          password: password.trim() || undefined 
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -195,9 +200,9 @@ export default function LoginPage() {
           {step === 'email' ? (
             <div>
               <div className="mb-6">
-                <h2 className="text-xl font-bold text-primary mb-1">Sign in</h2>
+                <h2 className="text-xl font-bold text-primary mb-1">Sign in / Onboarding</h2>
                 <p className="text-secondary text-sm leading-relaxed">
-                  Enter your company email to receive a secure one-time sign-in code.
+                  Enter your company email to receive a secure one-time verification code.
                 </p>
               </div>
 
@@ -221,6 +226,21 @@ export default function LoginPage() {
                     />
                   </div>
                   <p className="text-xs text-muted mt-2">Restricted to @takeoutmedia.xyz and @tmlabs.xyz</p>
+                </div>
+
+                <div>
+                  <label htmlFor="password-input" className="block text-xs font-bold text-muted uppercase tracking-widest mb-2">
+                    Password (Optional / Set New Password)
+                  </label>
+                  <input
+                    id="password-input"
+                    type="password"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    placeholder="Enter password..."
+                    className="w-full px-4 py-3 bg-elevated border border-slate-700/40 rounded-xl text-primary placeholder:text-muted text-sm focus:outline-none focus:ring-2 focus:ring-brand-pink/50 focus:border-brand-pink/50 transition-all"
+                    autoComplete="new-password"
+                  />
                 </div>
 
                 {error && (

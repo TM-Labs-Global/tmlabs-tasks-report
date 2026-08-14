@@ -187,7 +187,7 @@ export default function FolderOverviewPage() {
     return (
       <div className="flex items-center justify-center h-64 text-muted text-sm">
         <AlertCircle size={18} className="mr-2 text-brand-pink" />
-        Folder not found.{' '}
+        Project not found.{' '}
         <Link href="/workspace" className="ml-1 text-brand-pink underline">Go back</Link>
       </div>
     );
@@ -265,7 +265,7 @@ export default function FolderOverviewPage() {
             </div>
             <div>
               <div className="text-[11px] font-bold uppercase tracking-widest mb-1" style={{ color: folderColor }}>
-                Folder · {space.name}
+                Project · {space.name}
               </div>
               <h1 className="text-[22px] font-extrabold text-primary leading-none">{folder.name}</h1>
               <p className="text-muted text-[13px] mt-1">

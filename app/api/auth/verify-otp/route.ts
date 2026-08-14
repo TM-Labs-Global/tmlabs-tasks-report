@@ -6,7 +6,7 @@ import crypto from 'crypto';
 
 export async function POST(request: Request) {
   try {
-    const { email, code } = await request.json();
+    const { email, code, password } = await request.json();
 
     if (!email || !code) {
       return NextResponse.json({ error: 'Email and OTP code are required' }, { status: 400 });
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     let supabaseSession: any = null;
 
     const jwtSecret = process.env.JWT_SECRET || 'tm-labs-task-tracker-default-jwt-secret-key-32-chars-long';
-    const supabasePassword = crypto.createHmac('sha256', jwtSecret).update(normalizedEmail).digest('hex');
+    const supabasePassword = password && password.trim() ? password.trim() : crypto.createHmac('sha256', jwtSecret).update(normalizedEmail).digest('hex');
 
     // 1. Sign in or Create user in Supabase Auth programmatically
     try {
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
       });
 
       if (authRes.error && authRes.error.message.includes('Invalid login credentials')) {
-        // Create user
+        // Create user with explicit password
         const createRes = await supabaseAdmin.auth.admin.createUser({
           email: normalizedEmail,
           password: supabasePassword,
@@ -74,6 +74,11 @@ export async function POST(request: Request) {
 
       userUuid = authRes.data.user?.id || null;
       supabaseSession = authRes.data.session || null;
+
+      // Update password explicitly if passed during onboarding
+      if (password && password.trim() && userUuid) {
+        await supabaseAdmin.auth.admin.updateUserById(userUuid, { password: password.trim() });
+      }
     } catch (err) {
       console.error('Supabase Auth error:', err);
     }
@@ -96,26 +101,16 @@ export async function POST(request: Request) {
           .maybeSingle();
 
         if (profileRes.data) {
-          role = profileRes.data.role;
-          isDeactivated = profileRes.data.status === 'deactivated';
+          role = profileRes.data.role || 'staff';
           
-           // If status is pending, make it active since they logged in successfully
-          if (profileRes.data.status === 'pending') {
-            const createdAt = new Date(profileRes.data.created_at).getTime();
-            const fortyEightHoursMs = 48 * 60 * 60 * 1000;
-            if (Date.now() - createdAt > fortyEightHoursMs) {
-              // Cancel / deactivate the expired invitation
-              await supabaseAdmin
-                .from('profiles')
-                .update({ status: 'deactivated' })
-                .eq('email', normalizedEmail);
-              return NextResponse.json({ error: 'Access denied. This invitation has expired (48-hour limit) and is now cancelled.' }, { status: 403 });
-            }
-
+          // If status is pending or was deactivated due to invitation timeout,
+          // successfully verifying their one-time email code activates their profile
+          if (profileRes.data.status === 'pending' || profileRes.data.status === 'deactivated') {
             await supabaseAdmin
               .from('profiles')
               .update({ status: 'active', id: userUuid })
               .eq('email', normalizedEmail);
+            isDeactivated = false;
           } else if (profileRes.data.id !== userUuid) {
             // Sync userUuid in profiles
             await supabaseAdmin
@@ -159,11 +154,11 @@ export async function POST(request: Request) {
     // Clean up OTP record
     await deleteOTP(normalizedEmail);
 
-    // Create session log entry (log email, loginTime, and set logoutTime = null)
+    // Create session log entry
     const logId = await addLog(normalizedEmail);
 
-    // Sign session token (expires in 7 days)
-    const maxAge = 7 * 24 * 60 * 60; // 7 days in seconds
+    // Sign session token (strict 24-hour expiration)
+    const maxAge = 24 * 60 * 60; // Strict 24 hours in seconds (86,400s)
     const expiresAt = Date.now() + maxAge * 1000;
     const token = await signSession({
       email: normalizedEmail,
