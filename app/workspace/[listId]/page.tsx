@@ -8,6 +8,12 @@ import { BoardView } from '@/features/tasks/BoardView';
 import { TaskDetailPanel } from '@/features/tasks/TaskDetailPanel';
 import { Sheet } from '@/components/ui/sheet';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   Loader2,
   ArrowLeft,
   Folder,
@@ -204,12 +210,12 @@ export default function ListDetailPage() {
         </Link>
       </div>
 
-      {/* ── VIEW SWITCHER TABS BAR (ClickUp Style) ── */}
+      {/* ── VIEW SWITCHER TABS BAR (Clean & Uncluttered) ── */}
       <div className="flex items-center justify-between gap-4 border-b border-white/8 pb-2 overflow-x-auto scrollbar-none">
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
           <button
             onClick={() => handleTabChange('list')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'list'
                 ? 'bg-brand-pink/20 text-white border border-brand-pink/40 shadow-sm'
                 : 'text-[#8A9CC8] hover:bg-white/5 hover:text-white'
@@ -221,7 +227,7 @@ export default function ListDetailPage() {
 
           <button
             onClick={() => handleTabChange('board')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'board'
                 ? 'bg-brand-pink/20 text-white border border-brand-pink/40 shadow-sm'
                 : 'text-[#8A9CC8] hover:bg-white/5 hover:text-white'
@@ -231,45 +237,30 @@ export default function ListDetailPage() {
             Board
           </button>
 
-          <button
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-[#4A5A82] hover:text-[#8A9CC8] transition-colors cursor-not-allowed opacity-60"
-            title="Timeline View (Coming Soon)"
-          >
-            <Clock size={14} />
-            Timeline
-          </button>
-
-          <button
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-[#4A5A82] hover:text-[#8A9CC8] transition-colors cursor-not-allowed opacity-60"
-            title="Table View (Coming Soon)"
-          >
-            <TableIcon size={14} />
-            Table
-          </button>
-
-          <button
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-[#4A5A82] hover:text-[#8A9CC8] transition-colors cursor-not-allowed opacity-60"
-            title="Workload View (Coming Soon)"
-          >
-            <BarChart2 size={14} />
-            Workload
-          </button>
-
-          <button
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-[#4A5A82] hover:text-[#8A9CC8] transition-colors cursor-not-allowed opacity-60"
-            title="Calendar View"
-          >
-            <CalendarIcon size={14} />
-            Calendar
-          </button>
-
-          <button
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-[#8A9CC8] hover:bg-white/5 hover:text-white transition-colors cursor-pointer"
-            onClick={() => alert('Custom View configuration feature.')}
-          >
-            <Plus size={13} />
-            View
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-[#8A9CC8] hover:bg-white/5 hover:text-white transition-colors cursor-pointer border border-transparent hover:border-white/10"
+              >
+                <Plus size={13} />
+                View
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-48 bg-slate-900 border border-slate-800 text-white p-1 shadow-xl">
+              <DropdownMenuItem className="flex items-center gap-2 text-xs font-medium text-slate-400 cursor-not-allowed py-2">
+                <Clock size={14} /> Timeline <span className="ml-auto text-[10px] text-brand-pink font-bold">Soon</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem className="flex items-center gap-2 text-xs font-medium text-slate-400 cursor-not-allowed py-2">
+                <TableIcon size={14} /> Table <span className="ml-auto text-[10px] text-brand-pink font-bold">Soon</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem className="flex items-center gap-2 text-xs font-medium text-slate-400 cursor-not-allowed py-2">
+                <BarChart2 size={14} /> Workload <span className="ml-auto text-[10px] text-brand-pink font-bold">Soon</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem className="flex items-center gap-2 text-xs font-medium text-slate-400 cursor-not-allowed py-2">
+                <CalendarIcon size={14} /> Calendar <span className="ml-auto text-[10px] text-brand-pink font-bold">Soon</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 

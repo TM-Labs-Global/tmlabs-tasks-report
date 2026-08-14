@@ -301,16 +301,15 @@ function AddTaskRow({
   const submit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!name.trim()) return;
-    await onAdd(name.trim(), statusId, {
+    const taskName = name.trim();
+    setName('');
+    await onAdd(taskName, statusId, {
       assigneeId: assigneeId || undefined,
       due_date: dueDate || undefined,
       priority,
     });
-    setName('');
-    setAssigneeId('');
-    setDueDate('');
-    setPriority('3');
-    setActive(false);
+    // Keep active so user can rapidly add another task sequentially
+    setActive(true);
   };
 
   if (!active) {

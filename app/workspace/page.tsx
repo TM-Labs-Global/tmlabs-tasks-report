@@ -101,18 +101,36 @@ export default function WorkspacePage() {
       });
 
       if (res.ok) {
+        const folderData = await res.json();
+        
+        // Auto-provision a default "Tasks" list inside this new project
+        const listRes = await fetch('/api/workspace/lists', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            space_id: selectedSpaceForFolder,
+            folder_id: folderData.id,
+            name: 'Tasks'
+          }),
+        });
+
         setNewFolderName('');
         setNewFolderColor('#6633FF');
         setIsCreateFolderOpen(false);
         setSelectedSpaceForFolder(null);
-        refreshData();
+        await refreshData();
+
+        if (listRes.ok) {
+          const newList = await listRes.json();
+          window.location.href = `/workspace/${newList.id}`;
+        }
       } else {
         const error = await res.json();
-        alert(`Error creating folder: ${error.error}`);
+        alert(`Error creating project: ${error.error}`);
       }
     } catch (err) {
       console.error(err);
-      alert('Failed to create folder');
+      alert('Failed to create project');
     }
   };
 
@@ -207,12 +225,12 @@ export default function WorkspacePage() {
             <Dialog open={isCreateFolderOpen} onOpenChange={setIsCreateFolderOpen}>
               <DialogTrigger asChild>
                 <Button className="bg-brand-purple hover:bg-brand-purple/90 text-white rounded-xl shadow-lg shadow-brand-purple/20 gap-2 cursor-pointer font-bold">
-                  <FolderPlus size={16} /> New Folder
+                  <FolderPlus size={16} /> New Project
                 </Button>
               </DialogTrigger>
               <DialogContent className="bg-card border border-slate-700/30 text-primary rounded-2xl">
                 <DialogHeader>
-                  <DialogTitle className="text-lg font-bold text-primary">Create Folder</DialogTitle>
+                  <DialogTitle className="text-lg font-bold text-primary">Create Project</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 pt-2">
                   <div className="space-y-1.5">
@@ -233,10 +251,10 @@ export default function WorkspacePage() {
 
                   <form onSubmit={handleCreateFolder} className="space-y-4">
                     <div className="space-y-1.5">
-                      <Label htmlFor="folderName" className="text-caption text-secondary font-semibold">Folder Name</Label>
+                      <Label htmlFor="folderName" className="text-caption text-secondary font-semibold">Project Name</Label>
                       <Input
                         id="folderName"
-                        placeholder="e.g. Frontend Tasks"
+                        placeholder="e.g. Frontend Workstream"
                         value={newFolderName}
                         onChange={e => setNewFolderName(e.target.value)}
                         className="bg-secondary border-slate-700/50 text-primary rounded-xl focus:border-brand-pink focus:ring-1 focus:ring-brand-pink/20"
@@ -270,7 +288,7 @@ export default function WorkspacePage() {
                         Cancel
                       </Button>
                       <Button type="submit" className="bg-brand-purple hover:bg-brand-purple/90 text-white rounded-xl cursor-pointer font-bold">
-                        Create Folder
+                        Create Project
                       </Button>
                     </DialogFooter>
                   </form>

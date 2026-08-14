@@ -237,17 +237,37 @@ export default function SpaceOverviewPage() {
     if (!folderName.trim()) return;
     setSaving(true);
     try {
+      // 1. Create the project (folder)
       const res = await fetch('/api/workspace/folders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ space_id: spaceId, name: folderName.trim(), color: folderColor }),
       });
       if (res.ok) {
+        const folderData = await res.json();
+        
+        // 2. Auto-provision a default "Tasks" list inside this new project
+        const listRes = await fetch('/api/workspace/lists', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ space_id: spaceId, folder_id: folderData.id, name: 'Tasks' }),
+        });
+
         setFolderName('');
         setFolderColor('#6633FF');
         setShowCreateFolder(false);
-        refreshData();
+        await refreshData();
+
+        if (listRes.ok) {
+          const newList = await listRes.json();
+          // Navigate straight to the new project's task list
+          router.push(`/workspace/${newList.id}`);
+        } else {
+          router.push(`/workspace/folder/${folderData.id}`);
+        }
       }
+    } catch (err) {
+      console.error(err);
     } finally {
       setSaving(false);
     }
