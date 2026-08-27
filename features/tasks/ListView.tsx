@@ -28,12 +28,12 @@ interface ListViewProps {
   onUpdateTask?: (taskId: string, fields: Record<string, any>) => Promise<void>;
 }
 
-// ─── Priority helpers (ClickUp standard colors) ────────────────────────────
+// ─── Priority helpers (ClickUp standard colors & explicit tooltips) ──────────
 const PRIORITY_CONFIG: Record<string, { label: string; color: string; bgColor: string; tooltip: string }> = {
-  '1': { label: 'Urgent', color: '#EF4444', bgColor: 'rgba(239,68,68,0.12)', tooltip: 'Urgent Priority' },
-  '2': { label: 'High',   color: '#F59E0B', bgColor: 'rgba(245,158,11,0.12)', tooltip: 'High Priority' },
-  '3': { label: 'Normal', color: '#3B82F6', bgColor: 'rgba(59,130,246,0.12)', tooltip: 'Normal Priority' },
-  '4': { label: 'Low',    color: '#94A3B8', bgColor: 'rgba(148,163,184,0.12)', tooltip: 'Low Priority / No Priority' },
+  '1': { label: 'Urgent', color: '#EF4444', bgColor: 'rgba(239,68,68,0.15)', tooltip: 'Red = Urgent Priority' },
+  '2': { label: 'High',   color: '#F59E0B', bgColor: 'rgba(245,158,11,0.15)', tooltip: 'Orange/Yellow = High Priority' },
+  '3': { label: 'Normal', color: '#3B82F6', bgColor: 'rgba(59,130,246,0.15)', tooltip: 'Blue = Normal Priority' },
+  '4': { label: 'Low',    color: '#94A3B8', bgColor: 'rgba(148,163,184,0.15)', tooltip: 'Grey = Low Priority' },
 };
 
 function getPriorityConfig(priority: number | string | null) {
@@ -74,6 +74,7 @@ function AvatarChip({ name, src, size = 22 }: { name: string; src?: string; size
 function TaskRow({
   task,
   statuses,
+  members,
   role,
   onTaskClick,
   onUpdateStatus,
@@ -82,6 +83,7 @@ function TaskRow({
 }: {
   task: any;
   statuses: any[];
+  members?: any[];
   role: string;
   onTaskClick: (id: string) => void;
   onUpdateStatus: (taskId: string, statusId: string) => Promise<void>;
@@ -202,27 +204,73 @@ function TaskRow({
         )}
       </div>
 
-      {/* ── Col 2: Assignees ── */}
+      {/* ── Col 2: Assignees (Inline Editable) ── */}
       <div className="cl-task-col cl-task-col--assignees">
-        {task.assignees && task.assignees.length > 0 ? (
-          <div className="cl-avatar-stack">
-            {task.assignees.slice(0, 3).map((a: any, i: number) => (
-              <div key={i} className="cl-avatar-wrap">
-                <AvatarChip name={a.username || a.email || '?'} src={a.profilePicture} size={22} />
-              </div>
-            ))}
-            {task.assignees.length > 3 && (
-              <div className="cl-avatar-overflow">+{task.assignees.length - 3}</div>
-            )}
-          </div>
+        {role === 'product_manager' && onUpdateTask && members && members.length > 0 ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center hover:opacity-80 transition-opacity cursor-pointer" title="Assign member">
+                {task.assignees && task.assignees.length > 0 ? (
+                  <div className="cl-avatar-stack">
+                    {task.assignees.slice(0, 3).map((a: any, i: number) => (
+                      <div key={i} className="cl-avatar-wrap">
+                        <AvatarChip name={a.username || a.email || '?'} src={a.profilePicture} size={22} />
+                      </div>
+                    ))}
+                    {task.assignees.length > 3 && (
+                      <div className="cl-avatar-overflow">+{task.assignees.length - 3}</div>
+                    )}
+                  </div>
+                ) : (
+                  <User size={14} className="cl-unassigned-icon" />
+                )}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="cl-status-menu">
+              <DropdownMenuItem
+                onClick={() => onUpdateTask(task.id, { assignee_ids: [] })}
+                className="cl-status-menu-item text-slate-400"
+              >
+                Unassigned
+              </DropdownMenuItem>
+              {members.map((m: any) => (
+                <DropdownMenuItem
+                  key={m.id}
+                  onClick={() => onUpdateTask(task.id, { assignee_ids: [m.id] })}
+                  className="cl-status-menu-item"
+                >
+                  <AvatarChip name={m.full_name || m.username || m.email} size={18} />
+                  <span>{m.full_name || m.username || m.email}</span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         ) : (
-          <User size={14} className="cl-unassigned-icon" />
+          task.assignees && task.assignees.length > 0 ? (
+            <div className="cl-avatar-stack">
+              {task.assignees.slice(0, 3).map((a: any, i: number) => (
+                <div key={i} className="cl-avatar-wrap">
+                  <AvatarChip name={a.username || a.email || '?'} src={a.profilePicture} size={22} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <User size={14} className="cl-unassigned-icon" />
+          )
         )}
       </div>
 
-      {/* ── Col 3: Due Date ── */}
+      {/* ── Col 3: Due Date (Inline Editable) ── */}
       <div className="cl-task-col cl-task-col--due">
-        {dueDateText ? (
+        {role === 'product_manager' && onUpdateTask ? (
+          <input
+            type="date"
+            value={task.due_date ? task.due_date.split('T')[0] : ''}
+            onChange={(e) => onUpdateTask(task.id, { due_date: e.target.value || null })}
+            className="bg-transparent text-xs text-secondary hover:text-primary cursor-pointer border-none focus:outline-none w-24"
+            title="Click to set due date"
+          />
+        ) : dueDateText ? (
           <span className={`cl-due-date${isOverdue ? ' cl-due-date--overdue' : ''}`}>
             <CalendarIcon size={12} />
             {dueDateText}
@@ -232,9 +280,44 @@ function TaskRow({
         )}
       </div>
 
-      {/* ── Col 4: Priority ── */}
+      {/* ── Col 4: Priority (Inline Dropdown Editable with Explicit Color Tooltips) ── */}
       <div className="cl-task-col cl-task-col--priority">
-        {priority ? (
+        {role === 'product_manager' && onUpdateTask ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="cursor-pointer focus:outline-none" title={priority?.tooltip || 'Set Priority'}>
+                {priority ? (
+                  <span
+                    className="cl-priority-chip"
+                    style={{ color: priority.color, backgroundColor: priority.bgColor }}
+                  >
+                    <Flag size={10} style={{ color: priority.color }} />
+                    {priority.label}
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[11px] text-muted">
+                    <Flag size={14} className="cl-unassigned-icon" />
+                    Low
+                  </span>
+                )}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="cl-status-menu">
+              <DropdownMenuItem onClick={() => onUpdateTask(task.id, { priority: '1' })} className="cl-status-menu-item" title="Red = Urgent Priority">
+                <Flag size={12} className="text-red-500" /> Urgent (Red)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onUpdateTask(task.id, { priority: '2' })} className="cl-status-menu-item" title="Orange/Yellow = High Priority">
+                <Flag size={12} className="text-amber-500" /> High (Orange)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onUpdateTask(task.id, { priority: '3' })} className="cl-status-menu-item" title="Blue = Normal Priority">
+                <Flag size={12} className="text-blue-500" /> Normal (Blue)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onUpdateTask(task.id, { priority: '4' })} className="cl-status-menu-item" title="Grey = Low Priority">
+                <Flag size={12} className="text-slate-400" /> Low (Grey)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : priority ? (
           <span
             className="cl-priority-chip cursor-pointer"
             title={priority.tooltip}
@@ -244,7 +327,7 @@ function TaskRow({
             {priority.label}
           </span>
         ) : (
-          <span title="Low Priority / No Priority" className="cursor-pointer inline-flex items-center">
+          <span title="Grey = Low Priority" className="cursor-pointer inline-flex items-center">
             <Flag size={14} className="cl-unassigned-icon" />
           </span>
         )}
@@ -464,6 +547,7 @@ function StatusSection({
                 key={task.id}
                 task={task}
                 statuses={allStatuses}
+                members={members}
                 role={role}
                 onTaskClick={onTaskClick}
                 onUpdateStatus={onUpdateStatus}

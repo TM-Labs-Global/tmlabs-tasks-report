@@ -225,54 +225,53 @@ export default function MyTasksPage() {
   const { tasks, refreshData, members, spaces, isLoading } = useWorkspace();
   const { user } = useAuth();
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'list' | 'board'>('list');
+  const [showClosed, setShowClosed] = useState(false);
 
   // Find this user's profile
-  const myProfile = members.find((m) => m.email === user?.email);
+  const myProfile = members.find((m) => m.email?.toLowerCase() === user?.email?.toLowerCase());
   const myUserId = myProfile?.id;
 
   // Filter to tasks assigned to current user
-  const myTasks = tasks.filter((task: any) =>
-    task.assignees?.some((a: any) => a.id === myUserId)
+  const rawMyTasks = tasks.filter((task: any) =>
+    task.assignees?.some((a: any) => a.id === myUserId || a.email?.toLowerCase() === user?.email?.toLowerCase()) ||
+    task.assignee_ids?.includes(myUserId)
   );
 
-  // Collect all unique statuses across user's tasks (preserve order: backlog last)
+  // Filter out closed tasks unless showClosed is toggled ON
+  const myTasks = showClosed
+    ? rawMyTasks
+    : rawMyTasks.filter((t: any) => t.status_type !== 'closed' && !['done', 'completed', 'closed'].includes(t.status?.toLowerCase()));
+
+  // Collect all unique statuses across user's tasks
   const backlogKeywords = ['backlog', 'archived', 'archive', 'done', 'closed'];
   const statusMap = new Map<string, { id: string; name: string; color: string }>();
-  for (const task of myTasks) {
+  for (const task of rawMyTasks) {
     const key = task.status;
     if (!statusMap.has(key)) {
       statusMap.set(key, {
         id: task.status_id || task.status,
         name: task.status,
-        color: task.status_color || '#9B9CA1',
+        color: task.status_color || '#94A3B8',
       });
     }
   }
 
   let orderedStatuses = Array.from(statusMap.values());
-  orderedStatuses = orderedStatuses.sort((a, b) => {
-    const aIsBack = backlogKeywords.some((k) => a.name.toLowerCase().includes(k));
-    const bIsBack = backlogKeywords.some((k) => b.name.toLowerCase().includes(k));
-    if (aIsBack && !bIsBack) return 1;
-    if (!aIsBack && bIsBack) return -1;
-    return 0;
-  });
-
-  // Collect all statuses for the status-switch dropdown
-  const allStatusesList: any[] = [];
-  for (const space of spaces || []) {
-    for (const list of space.folderlessLists || []) {
-      for (const s of list.statuses || []) {
-        if (!allStatusesList.find((x) => x.id === s.id)) allStatusesList.push(s);
-      }
-    }
-    for (const folder of space.folders || []) {
-      for (const list of folder.lists || []) {
-        for (const s of list.statuses || []) {
-          if (!allStatusesList.find((x) => x.id === s.id)) allStatusesList.push(s);
-        }
-      }
-    }
+  if (orderedStatuses.length === 0) {
+    orderedStatuses = [
+      { id: 'todo', name: 'To Do', color: '#8A9CC8' },
+      { id: 'in_progress', name: 'In Progress', color: '#F59E0B' },
+      { id: 'done', name: 'Done', color: '#22C55E' },
+    ];
+  } else {
+    orderedStatuses = orderedStatuses.sort((a, b) => {
+      const aIsBack = backlogKeywords.some((k) => a.name.toLowerCase().includes(k));
+      const bIsBack = backlogKeywords.some((k) => b.name.toLowerCase().includes(k));
+      if (aIsBack && !bIsBack) return 1;
+      if (!aIsBack && bIsBack) return -1;
+      return 0;
+    });
   }
 
   const handleUpdateStatus = async (taskId: string, statusId: string) => {
@@ -288,31 +287,85 @@ export default function MyTasksPage() {
     }
   };
 
+  const handleUpdateTask = async (taskId: string, fields: Record<string, any>) => {
+    try {
+      await fetch(`/api/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(fields),
+      });
+      refreshData();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] gap-3">
         <Loader2 className="w-7 h-7 text-brand-pink animate-spin" />
-        <p className="text-[13px] text-[#9B9CA1] animate-pulse">Loading your tasks...</p>
+        <p className="text-[13px] text-muted animate-pulse">Loading your tasks...</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-0">
+    <div className="space-y-4 w-full">
       {/* ── Page Header ── */}
-      <div className="pb-5 space-y-0.5">
-        <h1 className="text-[22px] font-bold text-primary tracking-tight leading-tight">My Tasks</h1>
-        <p className="text-[13px] text-[#9B9CA1]">
-          Your personal dashboard of all assigned items across spaces.
-        </p>
+      <div className="flex items-center justify-between gap-4 pb-2 border-b border-white/5">
+        <div>
+          <h1 className="text-[22px] font-bold text-primary tracking-tight leading-tight">My Tasks</h1>
+          <p className="text-[12px] text-muted">
+            Your personal dashboard of all assigned items across spaces ({myTasks.length} task{myTasks.length !== 1 ? 's' : ''})
+          </p>
+        </div>
       </div>
 
-      {/* ── Task List (ClickUp style) ── */}
+      {/* ── VIEW SWITCHER & CLOSED TOGGLE ── */}
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/8 pb-2">
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => setActiveTab('list')}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'list'
+                ? 'bg-brand-pink/20 text-white border border-brand-pink/40 shadow-sm'
+                : 'text-muted hover:bg-white/5 hover:text-white'
+            }`}
+          >
+            List
+          </button>
+
+          <button
+            onClick={() => setActiveTab('board')}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'board'
+                ? 'bg-brand-pink/20 text-white border border-brand-pink/40 shadow-sm'
+                : 'text-muted hover:bg-white/5 hover:text-white'
+            }`}
+          >
+            Board
+          </button>
+        </div>
+
+        <button
+          onClick={() => setShowClosed(!showClosed)}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+            showClosed
+              ? 'bg-brand-pink/20 text-brand-pink border border-brand-pink/40'
+              : 'bg-white/5 text-muted hover:text-white'
+          }`}
+        >
+          {showClosed ? '✓ Show Closed' : 'Show Closed'}
+        </button>
+      </div>
+
+      {/* ── Task Canvas ── */}
       {myTasks.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-3 border border-dashed border-white/8 rounded-xl">
-          <CheckSquare size={32} className="text-[#55565C]" />
-          <p className="text-[14px] font-semibold text-[#9B9CA1]">No tasks assigned to you</p>
-          <p className="text-[12px] text-[#55565C]">Ask your PM to assign tasks to your account.</p>
+        <div className="flex flex-col items-center justify-center py-20 gap-3 border border-dashed border-white/8 rounded-2xl">
+          <p className="text-[14px] font-semibold text-muted">No assigned tasks found</p>
+          <p className="text-[12px] text-muted/70">
+            {showClosed ? 'You have no tasks assigned.' : 'Toggle "Show Closed" to view completed tasks or ask your PM for new assignments.'}
+          </p>
         </div>
       ) : (
         <div className="mytask-container">
@@ -323,7 +376,7 @@ export default function MyTasksPage() {
                 key={status.id}
                 status={status}
                 tasks={statusTasks}
-                allStatuses={allStatusesList}
+                allStatuses={orderedStatuses}
                 onTaskClick={setSelectedTaskId}
                 onUpdateStatus={handleUpdateStatus}
               />

@@ -1,5 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
+import crypto from 'crypto';
 
 export interface OTPRecord {
   email: string;
@@ -14,7 +15,21 @@ export interface LogRecord {
   logoutTime: string | null;
 }
 
+export interface UserRecord {
+  id: string;
+  email: string;
+  passwordHash?: string;
+  passwordSalt?: string;
+  role: 'product_manager' | 'staff' | 'stakeholder';
+  status: 'active' | 'pending' | 'deactivated';
+  fullName?: string;
+  avatarUrl?: string;
+  createdAt?: string;
+  hasPassword?: boolean;
+}
+
 interface LocalDBData {
+  users?: UserRecord[];
   otps: OTPRecord[];
   logs: LogRecord[];
 }
@@ -131,7 +146,7 @@ export async function saveOTP(email: string, code: string, expiresAt: number): P
         throw new Error(`Supabase error saving OTP: ${errText}`);
       }
     } catch (err: any) {
-      console.error('Supabase saveOTP failed.', err);
+      console.warn('Supabase saveOTP falling back to local:', err?.message || err);
       if (isServerlessProduction()) {
         throw err;
       }
@@ -183,7 +198,7 @@ export async function getOTP(email: string): Promise<OTPRecord | null> {
       }
       return null;
     } catch (err: any) {
-      console.error('Supabase getOTP failed.', err);
+      console.warn('Supabase getOTP falling back to local:', err?.message || err);
       if (isServerlessProduction()) {
         throw err;
       }
@@ -220,7 +235,7 @@ export async function deleteOTP(email: string): Promise<void> {
         throw new Error(`Supabase deleteOTP failed: ${errText}`);
       }
     } catch (err: any) {
-      console.error('Supabase deleteOTP failed.', err);
+      console.warn('Supabase deleteOTP falling back to local:', err?.message || err);
       if (isServerlessProduction()) {
         throw err;
       }
@@ -384,3 +399,130 @@ async function getAllLogsLocal(): Promise<LogRecord[]> {
   // Sort descending by login time
   return [...db.logs].sort((a, b) => new Date(b.loginTime).getTime() - new Date(a.loginTime).getTime());
 }
+
+// --- Password Hashing & User Account Management ---
+
+/**
+ * Hashes a password using PBKDF2 with SHA-512 and salt.
+ */
+export function hashPassword(password: string, existingSalt?: string) {
+  const salt = existingSalt || crypto.randomBytes(16).toString('hex');
+  const hash = crypto.pbkdf2Sync(password, salt, 10000, 64, 'sha512').toString('hex');
+  return { hash, salt };
+}
+
+/**
+ * Verifies a password against a stored hash and salt.
+ */
+export function verifyPassword(password: string, hash: string, salt: string): boolean {
+  if (!password || !hash || !salt) return false;
+  const calculatedHash = crypto.pbkdf2Sync(password, salt, 10000, 64, 'sha512').toString('hex');
+  return calculatedHash === hash;
+}
+
+/**
+ * Default initial users if none exist in the local db
+ */
+const DEFAULT_INITIAL_USERS: UserRecord[] = [
+  {
+    id: 'user-pm-info',
+    email: 'info@tmlabs.xyz',
+    role: 'product_manager',
+    status: 'active',
+    fullName: 'TM Labs PM',
+    hasPassword: false,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'user-pm-ops',
+    email: 'operations@tmlabs.xyz',
+    role: 'product_manager',
+    status: 'active',
+    fullName: 'Operations',
+    hasPassword: false,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'user-staff-roseline',
+    email: 'roseline@tmlabs.xyz',
+    role: 'staff',
+    status: 'active',
+    fullName: 'Roseline',
+    hasPassword: false,
+    createdAt: new Date().toISOString()
+  }
+];
+
+/**
+ * Retrieves all registered users from local DB.
+ */
+export async function getAllUsers(): Promise<UserRecord[]> {
+  const db = await readLocalDB();
+  if (!db.users || db.users.length === 0) {
+    db.users = [...DEFAULT_INITIAL_USERS];
+    await writeLocalDB(db);
+  }
+  return db.users;
+}
+
+/**
+ * Retrieves a user by their email address.
+ */
+export async function getUserByEmail(email: string): Promise<UserRecord | null> {
+  const normalized = email.toLowerCase().trim();
+  const users = await getAllUsers();
+  const found = users.find(u => u.email.toLowerCase() === normalized);
+  return found || null;
+}
+
+/**
+ * Saves or updates a user in the database.
+ */
+export async function saveUser(userData: Partial<UserRecord> & { email: string }): Promise<UserRecord> {
+  const normalized = userData.email.toLowerCase().trim();
+  const db = await readLocalDB();
+  if (!db.users) db.users = [...DEFAULT_INITIAL_USERS];
+
+  const index = db.users.findIndex(u => u.email.toLowerCase() === normalized);
+  let updatedUser: UserRecord;
+
+  if (index >= 0) {
+    updatedUser = {
+      ...db.users[index],
+      ...userData,
+      email: normalized,
+      hasPassword: !!(userData.passwordHash || db.users[index].passwordHash)
+    };
+    db.users[index] = updatedUser;
+  } else {
+    updatedUser = {
+      id: userData.id || crypto.randomUUID(),
+      role: userData.role || (db.users.length === 0 ? 'product_manager' : 'staff'),
+      status: userData.status || 'active',
+      fullName: userData.fullName || normalized.split('@')[0],
+      createdAt: userData.createdAt || new Date().toISOString(),
+      hasPassword: !!userData.passwordHash,
+      ...userData,
+      email: normalized
+    };
+    db.users.push(updatedUser);
+  }
+
+  await writeLocalDB(db);
+  return updatedUser;
+}
+
+/**
+ * Updates a user's password and sets status to active.
+ */
+export async function setUserPassword(email: string, password: string): Promise<UserRecord> {
+  const { hash, salt } = hashPassword(password);
+  return saveUser({
+    email,
+    passwordHash: hash,
+    passwordSalt: salt,
+    status: 'active',
+    hasPassword: true
+  });
+}
+

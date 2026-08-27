@@ -15,7 +15,11 @@
 
     padding: var(--spacing-2) var(--spacing-4);
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: all 150ms ease-in-out;
+
+    &:active {
+        transform: scale(0.97);
+    }
 
     /* Default disabled state */
     &:disabled {

@@ -3,28 +3,28 @@
 /* === TM Labs Light Mode (Default) === */
 :root {
   /* ── Canvas & Container Backgrounds ── */
-  --bg-primary: #F7F8FA;        /* Crisp off-white canvas (#F7F8FA) */
-  --bg-secondary: #FFFFFF;      /* Pure white sidebar & panels (#FFFFFF) */
-  --bg-card: #FFFFFF;           /* Card / row background */
-  --bg-elevated: #F0F2F5;       /* Elevated surface / hover background */
-  --bg-overlay: rgba(0, 0, 0, 0.4);
+  --bg-primary: #FFFFFF;        /* Pure white canvas (#FFFFFF) */
+  --bg-secondary: #F8FAFC;      /* Crisp light sidebar & panels (#F8FAFC) */
+  --bg-card: #FFFFFF;           /* Card / row background (#FFFFFF) */
+  --bg-elevated: #F1F5F9;       /* Elevated surface / hover background */
+  --bg-overlay: rgba(15, 23, 42, 0.5);
 
   /* ── Icon Rail & Row Separators ── */
-  --cu-icon-rail: #F0F2F5;      /* Light icon rail strip */
+  --cu-icon-rail: #F1F5F9;      /* Ultra-thin light icon rail strip */
   --cu-row-border: #E4E7EC;     /* Divider lines (#E4E7EC) */
   --cu-in-progress: #645BFF;    /* Status badge highlight */
 
   /* Text (High-Contrast WCAG Compliant) */
   --text-primary: #1A1D20;       /* Dark charcoal text (#1A1D20) */
-  --text-secondary: #5A6068;     /* Medium gray text (#5A6068) */
-  --text-muted: #8A9099;         /* Muted gray text (#8A9099) */
+  --text-secondary: #475569;     /* Medium gray text (#475569) */
+  --text-muted: #64748B;         /* Muted gray text (#64748B) */
   --text-accent: var(--color-pink);
   --text-inverse: #FFFFFF;
 
   /* Borders */
   --border-default: #E4E7EC;     /* Light gray border (#E4E7EC) */
-  --border-subtle: #F0F2F5;
-  --border-strong: #CBD5E1;
+  --border-subtle: #F1F5F9;
+  --border-strong: #94A3B8;
   --border-focus: var(--color-pink);
 
   /* Status Colors */

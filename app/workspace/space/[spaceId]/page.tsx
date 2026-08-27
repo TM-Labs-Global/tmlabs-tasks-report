@@ -427,11 +427,11 @@ export default function SpaceOverviewPage() {
         </div>
       )}
 
-      {/* ── Create Project Modal ── */}
+      {/* ── Create Project Modal (Single Input) ── */}
       <Dialog open={showCreateFolder} onOpenChange={setShowCreateFolder}>
-        <DialogContent className="bg-card border border-border text-primary rounded-2xl">
+        <DialogContent className="bg-card border border-border text-primary rounded-2xl max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-[16px] font-bold">Create Project in {space.name}</DialogTitle>
+            <DialogTitle className="text-[16px] font-bold">Create New Project</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleCreateFolder} className="space-y-4 pt-1">
             <div className="space-y-1.5">
@@ -444,22 +444,6 @@ export default function SpaceOverviewPage() {
                 className="bg-elevated border-border text-primary rounded-xl focus:border-brand-purple focus:ring-1 focus:ring-brand-purple/20"
                 required
               />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-[11px] font-semibold text-muted uppercase">Project Color</Label>
-              <div className="flex gap-2 items-center">
-                <input
-                  type="color"
-                  value={folderColor}
-                  onChange={(e) => setFolderColor(e.target.value)}
-                  className="w-9 h-9 rounded-lg border border-border cursor-pointer p-0.5 bg-elevated"
-                />
-                <Input
-                  value={folderColor}
-                  onChange={(e) => setFolderColor(e.target.value)}
-                  className="bg-elevated border-border text-primary rounded-xl flex-1"
-                />
-              </div>
             </div>
             <DialogFooter className="pt-2">
               <Button type="button" variant="outline" onClick={() => setShowCreateFolder(false)} className="rounded-xl cursor-pointer">

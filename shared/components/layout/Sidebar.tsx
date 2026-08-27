@@ -117,13 +117,19 @@ function SpaceSection({
         {/* Space name — navigable link */}
         <Link
           href={spaceHref}
-          className={`flex-1 min-w-0 ml-1 text-[10px] font-bold uppercase tracking-widest truncate transition-colors ${
+          className={`flex-1 min-w-0 ml-1 text-[11px] font-bold uppercase tracking-wider truncate flex items-center gap-1.5 transition-colors ${
             isSpaceActive
               ? 'text-brand-pink'
-              : 'text-[#4A5A82] hover:text-[#8A9CC8]'
+              : 'text-[#8A9CC8] hover:text-white'
           }`}
         >
-          {space.name}
+          {space.color && (
+            <span
+              className="w-2 h-2 rounded-full flex-shrink-0"
+              style={{ backgroundColor: space.color }}
+            />
+          )}
+          <span className="truncate">{space.name}</span>
         </Link>
 
         {/* Add List shortcut (PM only) */}
@@ -589,31 +595,29 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
                 </div>
               )}
 
-              {/* ── PM / ADMIN: Tiered Spaces & Projects Hierarchy ── */}
-              {(role === 'product_manager' || role === 'stakeholder') && (
-                <div>
-                  <div className="flex items-center justify-between px-2 mb-1.5">
-                    <p className="text-[10px] font-bold text-[#4A5A82] uppercase tracking-widest">
-                      Spaces & Projects
-                    </p>
-                  </div>
-                  <div className="space-y-3">
-                    {(spaces || []).map((space: any) => (
-                      <SpaceSection
-                        key={space.id}
-                        space={space}
-                        pathname={pathname}
-                        tasks={tasks}
-                      />
-                    ))}
-                    {(spaces || []).length === 0 && (
-                      <p className="px-2 text-[11px] text-[#4A5A82] italic">
-                        Loading workspace spaces...
-                      </p>
-                    )}
-                  </div>
+              {/* ── Spaces & Projects Hierarchy (All Users) ── */}
+              <div>
+                <div className="flex items-center justify-between px-2 mb-1.5">
+                  <p className="text-[10px] font-bold text-muted uppercase tracking-widest">
+                    Spaces & Projects
+                  </p>
                 </div>
-              )}
+                <div className="space-y-3">
+                  {(spaces || []).map((space: any) => (
+                    <SpaceSection
+                      key={space.id}
+                      space={space}
+                      pathname={pathname}
+                      tasks={tasks}
+                    />
+                  ))}
+                  {(spaces || []).length === 0 && (
+                    <p className="px-2 text-[11px] text-muted italic">
+                      No spaces found.
+                    </p>
+                  )}
+                </div>
+              </div>
             </nav>
           </div>
         )}

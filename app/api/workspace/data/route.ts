@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySession } from '@/shared/utils/session';
+import { supabaseAdmin } from '@/shared/utils/supabaseAdmin';
 
 export async function GET() {
   try {
@@ -10,35 +11,44 @@ export async function GET() {
     const session = await verifySession(token);
     if (!session) return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
 
-    const supabaseUrl = process.env.SUPABASE_URL || '';
-    const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+    // Execute queries in parallel using supabaseAdmin for maximum speed & stability
+    const [
+      { data: profilesData, error: profilesErr },
+      { data: allSpaces, error: spacesErr },
+      { data: allFolders, error: foldersErr },
+      { data: allLists, error: listsErr },
+      { data: dbTasks, error: tasksErr }
+    ] = await Promise.all([
+      supabaseAdmin.from('profiles').select('*').eq('status', 'active'),
+      supabaseAdmin.from('spaces').select('*').order('position', { ascending: true }),
+      supabaseAdmin.from('folders').select('*').order('position', { ascending: true }),
+      supabaseAdmin.from('lists').select('*, statuses(*)').order('position', { ascending: true }),
+      supabaseAdmin.from('tasks').select('*, status:statuses(*), list:lists(id, name), assignees:task_assignees(profile:profiles(*)), tags:task_tag_links(tag:task_tags(*))').order('position', { ascending: true })
+    ]);
 
-    const headers = {
-      'apikey': serviceRole,
-      'Authorization': `Bearer ${serviceRole}`
-    };
+    if (profilesErr) console.error('Profiles query error:', profilesErr);
+    if (spacesErr) console.error('Spaces query error:', spacesErr);
+    if (foldersErr) console.error('Folders query error:', foldersErr);
+    if (listsErr) console.error('Lists query error:', listsErr);
+    if (tasksErr) console.error('Tasks query error:', tasksErr);
 
-    // Helper to fetch from Supabase Rest API
-    const getFromSupabase = async (path: string) => {
-      const res = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
-        headers,
-        cache: 'no-store'
-      });
-      if (!res.ok) {
-        throw new Error(`Supabase query failed for ${path}: ${res.status} ${await res.text()}`);
+    const DEFAULT_SPACES = [
+      { id: 'space-in-house', name: 'In-House Projects', color: '#FF3396', position: 1 },
+      { id: 'space-client-projects', name: 'Client Projects', color: '#00F2FE', position: 2 },
+      { id: 'space-growth-marketing', name: 'Growth & Marketing', color: '#7C3AED', position: 3 }
+    ];
+
+    let effectiveSpaces = allSpaces && allSpaces.length > 0 ? allSpaces : DEFAULT_SPACES;
+
+    // Ensure the 3 primary spaces always exist in effective spaces if missing
+    const existingNames = new Set(effectiveSpaces.map((s: any) => s.name?.toLowerCase()));
+    DEFAULT_SPACES.forEach(defSpace => {
+      if (!existingNames.has(defSpace.name.toLowerCase())) {
+        effectiveSpaces.push(defSpace);
       }
-      return res.json();
-    };
+    });
 
-    // 1. Fetch team members (profiles)
-    const profilesData = await getFromSupabase('profiles?status=eq.active');
-
-    // 2. Fetch Spaces, Folders, and Lists to build hierarchy
-    const allSpaces = await getFromSupabase('spaces?order=position.asc');
-    const allFolders = await getFromSupabase('folders?order=position.asc');
-    const allLists = await getFromSupabase('lists?select=*,statuses(*)&order=position.asc');
-
-    const hierarchy = (allSpaces || []).map((space: any) => {
+    const hierarchy = effectiveSpaces.map((space: any) => {
       const spaceFolders = (allFolders || []).filter((f: any) => f.space_id === space.id).map((folder: any) => ({
         ...folder,
         lists: (allLists || []).filter((l: any) => l.folder_id === folder.id)
@@ -50,12 +60,6 @@ export async function GET() {
         folderlessLists
       };
     });
-
-    // 3. Fetch Tasks
-    const selectQuery = '*,status:statuses(*),list:lists(id,name),assignees:task_assignees(profile:profiles!task_assignees_user_id_fkey(*)),tags:task_tag_links(tag:task_tags(*))';
-    const dbTasks = await getFromSupabase(`tasks?select=${encodeURIComponent(selectQuery)}&order=position.asc`);
-
-    console.log('API WORKSPACE DATA (FETCH) -> profiles:', profilesData?.length, 'spaces:', allSpaces?.length, 'tasks:', dbTasks?.length);
 
     return NextResponse.json({
       members: profilesData || [],

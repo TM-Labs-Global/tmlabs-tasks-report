@@ -1,11 +1,5 @@
 {
-  "otps": [
-    {
-      "email": "info@tmlabs.xyz",
-      "code": "466285",
-      "expiresAt": 1783694683109
-    }
-  ],
+  "otps": [],
   "logs": [
     {
       "id": "2378dac7-2be8-4686-8f5e-b7d0d56f0a6b",
@@ -18,6 +12,55 @@
       "email": "info@tmlabs.xyz",
       "loginTime": "2026-07-10T13:56:40.123Z",
       "logoutTime": "2026-07-10T14:39:27.125Z"
+    },
+    {
+      "id": "5a127acb-cfad-47e2-9050-4d1a65773949",
+      "email": "info@tmlabs.xyz",
+      "loginTime": "2026-08-14T17:05:37.563Z",
+      "logoutTime": null
+    },
+    {
+      "id": "2a4c9828-ffd1-4cb9-aea5-de51d554e0f4",
+      "email": "info@tmlabs.xyz",
+      "loginTime": "2026-08-27T11:17:01.479Z",
+      "logoutTime": null
+    },
+    {
+      "id": "a9cf848b-fbb3-4c14-afcc-7425d39ba1a7",
+      "email": "info@tmlabs.xyz",
+      "loginTime": "2026-08-27T11:20:29.438Z",
+      "logoutTime": null
+    }
+  ],
+  "users": [
+    {
+      "id": "user-pm-info",
+      "email": "info@tmlabs.xyz",
+      "role": "product_manager",
+      "status": "active",
+      "fullName": "TM Labs PM",
+      "hasPassword": true,
+      "createdAt": "2026-08-27T12:56:35.150Z",
+      "passwordHash": "8b1c387148265364f47cbbd4bd6a1c750c6d96b0049f61d5b0b9b664c898ba9c3a4a092bfa93204f35877e1d2bad4fc03daef32c01fe54477b23fc1cc198d727",
+      "passwordSalt": "050e22866b10aee5e10cd5046c595243"
+    },
+    {
+      "id": "user-pm-ops",
+      "email": "operations@tmlabs.xyz",
+      "role": "product_manager",
+      "status": "active",
+      "fullName": "Operations",
+      "hasPassword": false,
+      "createdAt": "2026-08-27T12:56:35.153Z"
+    },
+    {
+      "id": "user-staff-roseline",
+      "email": "roseline@tmlabs.xyz",
+      "role": "staff",
+      "status": "active",
+      "fullName": "Roseline",
+      "hasPassword": false,
+      "createdAt": "2026-08-27T12:56:35.153Z"
     }
   ]
 }

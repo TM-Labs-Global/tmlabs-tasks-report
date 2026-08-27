@@ -78,19 +78,18 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     try {
       const res = await fetch('/api/workspace/data');
-      if (!res.ok) {
-        throw new Error(`Failed to fetch workspace data: ${res.statusText}`);
-      }
-      const data = await res.json();
-      setMembers(data.members || []);
-      setSpaces(data.spaces || []);
+      if (res.ok) {
+        const data = await res.json();
+        setMembers(data.members || []);
+        setSpaces(data.spaces || []);
 
-      const normalized = (data.tasks || []).map(normalizeSupabaseTask);
-      setTasks(normalized);
-      setIsConfigured(true);
+        const normalized = (data.tasks || []).map(normalizeSupabaseTask);
+        setTasks(normalized);
+      }
     } catch (err) {
       console.error('WorkspaceContext fetchData error:', err);
     } finally {
+      setIsConfigured(true);
       setIsLoading(false);
     }
   }, [normalizeSupabaseTask]);

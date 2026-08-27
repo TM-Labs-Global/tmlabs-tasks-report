@@ -8,17 +8,15 @@ import { useFilters } from '@/shared/context/FilterContext';
 
 import { NotificationBell } from '@/features/notifications/NotificationBell';
 
+import { useAuth } from '@/shared/context/AuthContext';
+
 export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   const pathname = usePathname();
-  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const { user } = useAuth();
+  const userEmail = user?.email || null;
   const [isDarkMode, setIsDarkMode] = useState(true);
 
   useEffect(() => {
-    fetch('/api/auth/me')
-      .then(res => res.json())
-      .then(data => { if (data.authenticated) setUserEmail(data.email); })
-      .catch(() => {});
-
     // Initialize theme from localStorage or system preference
     const savedTheme = localStorage.getItem('theme-mode');
     const prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
