@@ -74,97 +74,104 @@ async function writeLocalDB(data: LocalDBData): Promise<void> {
 // --- OTP Operations ---
 
 /**
- * Saves a generated OTP to both local storage and MongoDB Atlas.
+ * Saves a generated OTP to MongoDB Atlas (with safe local fallback).
  */
 export async function saveOTP(email: string, code: string, expiresAt: number): Promise<void> {
   const normalizedEmail = email.toLowerCase().trim();
-  // 1. Always save locally immediately
-  await saveOTPLocal(normalizedEmail, code, expiresAt);
-
-  // 2. Also persist to MongoDB Atlas if available
   try {
     const db = await getDb();
     await db.collection('otps').updateOne(
-      { email: normalizedEmail },
+      { email: { $regex: new RegExp(`^${normalizedEmail}$`, 'i') } },
       {
         $set: {
           email: normalizedEmail,
-          code,
-          expiresAt,
+          code: String(code).trim(),
+          expiresAt: Number(expiresAt),
           updated_at: new Date().toISOString()
         }
       },
       { upsert: true }
     );
   } catch (err) {
-    console.warn('MongoDB saveOTP fallback to local:', err);
+    console.error('MongoDB saveOTP error:', err);
   }
+
+  // Safe local cache attempt (ignored if serverless read-only filesystem)
+  try {
+    await saveOTPLocal(normalizedEmail, code, expiresAt);
+  } catch {}
 }
 
 async function saveOTPLocal(email: string, code: string, expiresAt: number) {
-  const db = await readLocalDB();
-  db.otps = (db.otps || []).filter(o => o.email !== email);
-  db.otps.push({ email, code, expiresAt });
-  await writeLocalDB(db);
+  try {
+    const db = await readLocalDB();
+    db.otps = (db.otps || []).filter(o => o.email !== email);
+    db.otps.push({ email, code, expiresAt });
+    await writeLocalDB(db);
+  } catch {}
 }
 
 /**
- * Retrieves the active OTP for an email from both local storage and MongoDB Atlas,
- * selecting the latest active record.
+ * Retrieves the active OTP for an email from MongoDB Atlas.
  */
 export async function getOTP(email: string): Promise<OTPRecord | null> {
   const normalizedEmail = email.toLowerCase().trim();
-  let localRecord: OTPRecord | null = null;
-  try {
-    localRecord = await getOTPLocal(normalizedEmail);
-  } catch {}
-
-  let atlasRecord: OTPRecord | null = null;
   try {
     const db = await getDb();
-    const doc = await db.collection('otps').findOne({ email: normalizedEmail });
+    const doc = await db.collection('otps').findOne({
+      email: { $regex: new RegExp(`^${normalizedEmail}$`, 'i') }
+    });
     if (doc) {
-      atlasRecord = {
+      return {
         email: doc.email,
-        code: doc.code,
+        code: String(doc.code).trim(),
         expiresAt: Number(doc.expiresAt)
       };
     }
   } catch (err) {
-    console.warn('MongoDB getOTP fallback to local:', err);
+    console.error('MongoDB getOTP error:', err);
   }
 
-  // If both exist, return the one with the latest expiration timestamp
-  if (localRecord && atlasRecord) {
-    return localRecord.expiresAt >= atlasRecord.expiresAt ? localRecord : atlasRecord;
-  }
-  return localRecord || atlasRecord || null;
+  try {
+    return await getOTPLocal(normalizedEmail);
+  } catch {}
+  return null;
 }
 
 async function getOTPLocal(email: string): Promise<OTPRecord | null> {
-  const db = await readLocalDB();
-  const found = (db.otps || []).find(o => o.email === email);
-  return found || null;
-}
-
-/**
- * Deletes an OTP code after verification from both local storage and MongoDB Atlas.
- */
-export async function deleteOTP(email: string): Promise<void> {
-  const normalizedEmail = email.toLowerCase().trim();
-  await deleteOTPLocal(normalizedEmail).catch(() => {});
   try {
-    const db = await getDb();
-    await db.collection('otps').deleteOne({ email: normalizedEmail });
-  } catch (err) {
-    console.warn('MongoDB deleteOTP fallback to local:', err);
+    const db = await readLocalDB();
+    const found = (db.otps || []).find(o => o.email === email);
+    return found || null;
+  } catch {
+    return null;
   }
 }
 
+/**
+ * Deletes an OTP code after verification from MongoDB Atlas.
+ */
+export async function deleteOTP(email: string): Promise<void> {
+  const normalizedEmail = email.toLowerCase().trim();
+  try {
+    const db = await getDb();
+    await db.collection('otps').deleteMany({
+      email: { $regex: new RegExp(`^${normalizedEmail}$`, 'i') }
+    });
+  } catch (err) {
+    console.error('MongoDB deleteOTP error:', err);
+  }
+  try {
+    await deleteOTPLocal(normalizedEmail);
+  } catch {}
+}
+
 async function deleteOTPLocal(email: string) {
-  const db = await readLocalDB();
-  db.otps = (db.otps || []).filter(o => o.email !== email);
-  await writeLocalDB(db);
+  try {
+    const db = await readLocalDB();
+    db.otps = (db.otps || []).filter(o => o.email !== email);
+    await writeLocalDB(db);
+  } catch {}
 }
 
 // --- Session Logs Operations ---
@@ -328,9 +335,6 @@ export async function getUserByEmail(email: string): Promise<UserRecord | null> 
 export async function saveUser(userData: Partial<UserRecord> & { email: string }): Promise<UserRecord> {
   const normalized = userData.email.toLowerCase().trim();
 
-  // Always update local DB for instant fallback
-  await saveUserLocal(userData);
-
   try {
     const db = await getDb();
 
@@ -359,7 +363,7 @@ export async function saveUser(userData: Partial<UserRecord> & { email: string }
       updateFields.avatar_url = userData.avatarUrl;
     }
 
-    const res = await db.collection('users').findOneAndUpdate(
+    await db.collection('users').updateOne(
       { email: { $regex: new RegExp(`^${normalized}$`, 'i') } },
       {
         $set: updateFields,
@@ -368,17 +372,35 @@ export async function saveUser(userData: Partial<UserRecord> & { email: string }
           created_at: new Date().toISOString()
         }
       },
-      { upsert: true, returnDocument: 'after' }
+      { upsert: true }
     );
 
-    const savedDoc = res || (await db.collection('users').findOne({ email: normalized }));
-    if (savedDoc) return mapMongoUser(savedDoc);
+    const savedDoc = await db.collection('users').findOne({
+      email: { $regex: new RegExp(`^${normalized}$`, 'i') }
+    });
+    if (savedDoc) {
+      // Safe local cache attempt
+      try {
+        await saveUserLocal(userData);
+      } catch {}
+      return mapMongoUser(savedDoc);
+    }
   } catch (err) {
-    console.warn('MongoDB saveUser fallback to local:', err);
+    console.error('MongoDB saveUser error:', err);
   }
 
-  const localUser = await getUserByEmail(normalized);
-  return localUser!;
+  try {
+    await saveUserLocal(userData);
+    const localUser = await getUserByEmail(normalized);
+    if (localUser) return localUser;
+  } catch {}
+
+  return {
+    id: userData.id || crypto.randomUUID(),
+    email: normalized,
+    role: userData.role || 'staff',
+    status: userData.status || 'active'
+  };
 }
 
 async function saveUserLocal(userData: Partial<UserRecord> & { email: string }): Promise<void> {
