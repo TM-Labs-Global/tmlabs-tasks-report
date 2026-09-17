@@ -279,8 +279,9 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
   const role = user?.role || 'staff';
   const selectedTeam = teams.find((t) => t.id === selectedTeamId);
 
-  // Find user's profile display name
-  const myProfile = members.find((m: any) => m.email === user?.email);
+  // Find user's profile display name and ID
+  const myProfile = members.find((m: any) => m.email?.toLowerCase() === user?.email?.toLowerCase());
+  const myUserId = myProfile?.id;
   const displayName = myProfile?.full_name || (user?.email ? user.email.split('@')[0] : 'User');
 
   // Sync theme state
@@ -300,11 +301,11 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
     }
   };
 
-  // ── Collect all assigned lists for staff ─────────────────────────────────
-  const allLists: { id: string; name: string; spaceName: string; color: string }[] = [];
+  // ── Collect all lists in workspace ─────────────────────────────────────
+  const allWorkspaceLists: { id: string; name: string; spaceName: string; color: string }[] = [];
   for (const space of spaces || []) {
     for (const list of space.folderlessLists || []) {
-      allLists.push({
+      allWorkspaceLists.push({
         id: list.id,
         name: list.name,
         spaceName: space.name,
@@ -313,7 +314,7 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
     }
     for (const folder of space.folders || []) {
       for (const list of folder.lists || []) {
-        allLists.push({
+        allWorkspaceLists.push({
           id: list.id,
           name: list.name,
           spaceName: space.name,
@@ -322,6 +323,16 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
       }
     }
   }
+
+  // ── Staff Assigned Lists: strictly scoped to projects where user has tasks ──
+  const staffAssignedLists = allWorkspaceLists.filter((list) => {
+    return tasks.some((t: any) =>
+      t.list_id === list.id && (
+        t.assignees?.some((a: any) => a.id === myUserId || a.email?.toLowerCase() === user?.email?.toLowerCase()) ||
+        t.assignee_ids?.includes(myUserId)
+      )
+    );
+  });
 
   // ── Section 1: Far-Left Control Rail Items (Fixed Ultra-Thin Strip) ───────
   const staffRailItems: NavItem[] = [
@@ -551,12 +562,17 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
                   <p className="text-[10px] font-bold text-[#4A5A82] uppercase tracking-widest px-2 mb-1.5">
                     Assigned Projects
                   </p>
-                  {allLists.length > 0 ? (
+                  {staffAssignedLists.length > 0 ? (
                     <div className="space-y-0.5">
-                      {allLists.map((list) => {
+                      {staffAssignedLists.map((list) => {
                         const href = `/workspace/${list.id}`;
                         const isActive = pathname === href || pathname.startsWith(href);
-                        const taskCount = tasks.filter((t) => t.list_id === list.id).length;
+                        const taskCount = tasks.filter((t: any) =>
+                          t.list_id === list.id && (
+                            t.assignees?.some((a: any) => a.id === myUserId || a.email?.toLowerCase() === user?.email?.toLowerCase()) ||
+                            t.assignee_ids?.includes(myUserId)
+                          )
+                        ).length;
 
                         return (
                           <Link
@@ -589,35 +605,37 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
                     </div>
                   ) : (
                     <p className="px-2 text-[11px] text-[#4A5A82] italic">
-                      No projects assigned yet.
+                      No projects with assigned tasks yet.
                     </p>
                   )}
                 </div>
               )}
 
-              {/* ── Spaces & Projects Hierarchy (All Users) ── */}
-              <div>
-                <div className="flex items-center justify-between px-2 mb-1.5">
-                  <p className="text-[10px] font-bold text-muted uppercase tracking-widest">
-                    Spaces & Projects
-                  </p>
-                </div>
-                <div className="space-y-3">
-                  {(spaces || []).map((space: any) => (
-                    <SpaceSection
-                      key={space.id}
-                      space={space}
-                      pathname={pathname}
-                      tasks={tasks}
-                    />
-                  ))}
-                  {(spaces || []).length === 0 && (
-                    <p className="px-2 text-[11px] text-muted italic">
-                      No spaces found.
+              {/* ── Spaces & Projects Hierarchy (Product Managers & Admins) ── */}
+              {role === 'product_manager' && (
+                <div>
+                  <div className="flex items-center justify-between px-2 mb-1.5">
+                    <p className="text-[10px] font-bold text-muted uppercase tracking-widest">
+                      Spaces & Projects
                     </p>
-                  )}
+                  </div>
+                  <div className="space-y-3">
+                    {(spaces || []).map((space: any) => (
+                      <SpaceSection
+                        key={space.id}
+                        space={space}
+                        pathname={pathname}
+                        tasks={tasks}
+                      />
+                    ))}
+                    {(spaces || []).length === 0 && (
+                      <p className="px-2 text-[11px] text-muted italic">
+                        No spaces found.
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
             </nav>
           </div>
         )}

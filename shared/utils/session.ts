@@ -1,32 +1,4 @@
-const encoder = new TextEncoder();
-const decoder = new TextDecoder();
-
-// Helper to base64url encode a string
-function base64urlEncode(str: string): string {
-  const base64 = btoa(str);
-  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
-// Helper to base64url decode a string
-function base64urlDecode(base64url: string): string {
-  let base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
-  while (base64.length % 4) {
-    base64 += '=';
-  }
-  return atob(base64);
-}
-
-// Helper to get Web Crypto Key from secret
-async function getCryptoKey(secret: string): Promise<CryptoKey> {
-  const keyBuffer = encoder.encode(secret);
-  return crypto.subtle.importKey(
-    'raw',
-    keyBuffer,
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign', 'verify']
-  );
-}
+import crypto from 'crypto';
 
 export interface SessionPayload {
   email: string;
@@ -35,28 +7,23 @@ export interface SessionPayload {
   role?: string;
 }
 
+const DEFAULT_SECRET = 'tm-labs-task-tracker-default-jwt-secret-key-32-chars-long';
+
 /**
  * Signs a session payload and returns a token string.
  * The token format is: [base64urlEncodedPayload].[base64urlEncodedSignature]
  */
 export async function signSession(payload: SessionPayload): Promise<string> {
-  const secret = process.env.JWT_SECRET || 'tm-labs-task-tracker-default-jwt-secret-key-32-chars-long';
-  const key = await getCryptoKey(secret);
-  
+  const secret = process.env.JWT_SECRET || DEFAULT_SECRET;
   const payloadStr = JSON.stringify(payload);
-  const encodedPayload = base64urlEncode(payloadStr);
+  const encodedPayload = Buffer.from(payloadStr, 'utf-8').toString('base64url');
   
-  const signatureBuffer = await crypto.subtle.sign(
-    'HMAC',
-    key,
-    encoder.encode(encodedPayload)
-  );
+  const signature = crypto
+    .createHmac('sha256', secret)
+    .update(encodedPayload)
+    .digest('base64url');
   
-  const signatureArray = Array.from(new Uint8Array(signatureBuffer));
-  const signatureStr = String.fromCharCode(...signatureArray);
-  const encodedSignature = base64urlEncode(signatureStr);
-  
-  return `${encodedPayload}.${encodedSignature}`;
+  return `${encodedPayload}.${signature}`;
 }
 
 /**
@@ -65,32 +32,30 @@ export async function signSession(payload: SessionPayload): Promise<string> {
  */
 export async function verifySession(token: string): Promise<SessionPayload | null> {
   try {
+    if (!token || typeof token !== 'string') return null;
     const parts = token.split('.');
     if (parts.length !== 2) return null;
     
     const [encodedPayload, encodedSignature] = parts;
-    const secret = process.env.JWT_SECRET || 'tm-labs-task-tracker-default-jwt-secret-key-32-chars-long';
-    const key = await getCryptoKey(secret);
+    const secret = process.env.JWT_SECRET || DEFAULT_SECRET;
     
-    // Verify signature
-    const signatureStr = base64urlDecode(encodedSignature);
-    const signatureBuffer = new Uint8Array(signatureStr.split('').map(c => c.charCodeAt(0))).buffer;
+    const expectedSignature = crypto
+      .createHmac('sha256', secret)
+      .update(encodedPayload)
+      .digest('base64url');
     
-    const isValid = await crypto.subtle.verify(
-      'HMAC',
-      key,
-      signatureBuffer,
-      encoder.encode(encodedPayload)
-    );
+    // Constant-time comparison to prevent timing attacks
+    const sigA = Buffer.from(encodedSignature, 'utf-8');
+    const sigB = Buffer.from(expectedSignature, 'utf-8');
+    if (sigA.length !== sigB.length || !crypto.timingSafeEqual(sigA, sigB)) {
+      return null;
+    }
     
-    if (!isValid) return null;
-    
-    // Decode payload
-    const payloadStr = base64urlDecode(encodedPayload);
+    const payloadStr = Buffer.from(encodedPayload, 'base64url').toString('utf-8');
     const payload = JSON.parse(payloadStr) as SessionPayload;
     
     // Check expiration
-    if (Date.now() > payload.expiresAt) {
+    if (!payload.expiresAt || Date.now() > payload.expiresAt) {
       return null;
     }
     

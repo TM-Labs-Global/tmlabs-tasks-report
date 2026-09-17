@@ -49,12 +49,16 @@ export default function SettingsPage() {
   const [savingPassword, setSavingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
-
-  const myProfile = members.find(m => m.email === user?.email);
+  const effectiveEmail = user?.email || '';
+  const myProfile = members.find(m => 
+    (user?.email && m.email?.toLowerCase() === user.email.toLowerCase()) || 
+    (effectiveEmail && m.email?.toLowerCase() === effectiveEmail.toLowerCase())
+  );
+  const effectiveRole = user?.role || myProfile?.role || 'staff';
 
   useEffect(() => {
     if (myProfile) {
-      setFullName(myProfile.full_name || '');
+      if (!fullName) setFullName(myProfile.full_name || '');
       if (myProfile.notification_preferences) {
         setPrefs({
           assigned: myProfile.notification_preferences.assigned ?? true,
@@ -65,7 +69,7 @@ export default function SettingsPage() {
         });
       }
     }
-  }, [myProfile]);
+  }, [myProfile, fullName]);
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -185,7 +189,7 @@ export default function SettingsPage() {
                     <Mail className="absolute left-3 top-2.5 h-4.5 w-4.5 text-muted" />
                     <Input 
                       id="email" 
-                      value={user?.email || ''} 
+                      value={effectiveEmail} 
                       disabled 
                       className="pl-9 bg-secondary/50 border-slate-700/30 text-muted rounded-xl cursor-not-allowed"
                     />
@@ -207,7 +211,7 @@ export default function SettingsPage() {
               <div className="flex items-center gap-2 bg-secondary/20 p-3 rounded-xl border border-slate-700/10">
                 <ShieldCheck size={16} className="text-brand-purple" />
                 <span className="text-caption text-secondary font-medium">
-                  Role Authorization: <strong className="text-primary capitalize">{user?.role.replace('_', ' ')}</strong>
+                  Role Authorization: <strong className="text-primary capitalize">{effectiveRole.replace('_', ' ')}</strong>
                 </span>
               </div>
 
