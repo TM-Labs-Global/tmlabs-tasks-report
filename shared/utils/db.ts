@@ -1,7 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
-import { getDb } from '@/shared/utils/mongoClient';
+import { getDb } from './mongoClient';
 
 export interface OTPRecord {
   email: string;
