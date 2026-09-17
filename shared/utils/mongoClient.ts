@@ -1,8 +1,12 @@
 import dns from 'dns';
-try {
-  dns.setServers(['2001:4860:4860::8888', '2001:4860:4860::8844', '8.8.8.8', '1.1.1.1']);
-} catch {
-  // Ignore in environments where setServers is restricted
+
+// Only set custom DNS fallback on local Windows development where SRV resolution might fail
+if (process.env.NODE_ENV === 'development' && process.platform === 'win32') {
+  try {
+    dns.setServers(['8.8.8.8', '1.1.1.1']);
+  } catch {
+    // Ignore in environments where setServers is restricted
+  }
 }
 
 import { MongoClient, Db } from 'mongodb';
@@ -22,20 +26,22 @@ if (!uri) {
   console.warn('MONGODB_URI is not set in environment variables');
 }
 
-if (process.env.NODE_ENV === 'development') {
-  if (!global._mongoClientPromise && uri) {
-    client = new MongoClient(uri);
-    global._mongoClientPromise = client.connect();
-  }
-  clientPromise = global._mongoClientPromise as Promise<MongoClient>;
-} else {
+const options = {
+  maxPoolSize: 10,
+  serverSelectionTimeoutMS: 5000,
+  connectTimeoutMS: 10000,
+};
+
+// Cache clientPromise across warm serverless function invocations
+if (!global._mongoClientPromise) {
   if (uri) {
-    client = new MongoClient(uri);
-    clientPromise = client.connect();
+    client = new MongoClient(uri, options);
+    global._mongoClientPromise = client.connect();
   } else {
-    clientPromise = Promise.reject(new Error('MONGODB_URI is missing'));
+    global._mongoClientPromise = Promise.reject(new Error('MONGODB_URI environment variable is missing.'));
   }
 }
+clientPromise = global._mongoClientPromise;
 
 export async function getDb(): Promise<Db> {
   if (!uri) {
