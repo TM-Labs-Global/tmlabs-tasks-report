@@ -59,8 +59,8 @@
       "fullName": "TM Labs PM",
       "hasPassword": true,
       "createdAt": "2026-08-27T12:56:35.150Z",
-      "passwordHash": "e9a64fd8e6d233708c05603d1a2ee3790b753cae9137a9beaf9d4114e9926411f8c084b18e5c2a294ddaae44fcb0c998583bd35d19d27a714fdb00e67ea7ea0b",
-      "passwordSalt": "f6f898ba23aa052ee261611c44adbe2d"
+      "passwordHash": "02397a7fd3b85176a60fabd9afe97fa3b2acfc3fef16bb25af81906f8eeac4487d38fde57939e3780929509b468d5314577f4fded400e2e92490ae165d5dc159",
+      "passwordSalt": "7502d07b03509020f45f32f0bcdc7d42"
     },
     {
       "id": "user-pm-ops",
