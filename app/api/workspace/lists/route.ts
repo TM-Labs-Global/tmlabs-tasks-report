@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySession } from '@/shared/utils/session';
-import { supabaseAdmin } from '@/shared/utils/supabaseAdmin';
+import { getDb } from '@/shared/utils/mongoClient';
+import { randomUUID } from 'crypto';
 
 // POST /api/workspace/lists — create a new list inside a space/folder
 export async function POST(request: Request) {
@@ -14,45 +15,57 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { data: creator } = await supabaseAdmin
-      .from('profiles').select('id').eq('email', session.email).maybeSingle();
+    const db = await getDb();
+    const creator = await db.collection('users').findOne({
+      email: { $regex: new RegExp(`^${session.email.trim()}$`, 'i') }
+    });
 
-    const body = await request.json();
+    const body = await request.json() as any;
     const { space_id, folder_id, name, color } = body;
     if (!space_id || !name) {
       return NextResponse.json({ error: 'space_id and name are required' }, { status: 400 });
     }
 
-    const { data: lastList } = await supabaseAdmin
-      .from('lists').select('position').eq('space_id', space_id)
-      .order('position', { ascending: false }).limit(1).maybeSingle();
-    const position = (lastList?.position ?? -1) + 1;
+    const lastList = await db.collection('lists')
+      .find({ space_id })
+      .sort({ position: -1 })
+      .limit(1)
+      .next();
 
-    const { data: list, error: listErr } = await supabaseAdmin
-      .from('lists')
-      .insert({
-        space_id, folder_id: folder_id || null, name,
-        color: color || null, position, created_by: creator?.id
-      })
-      .select().single();
-    if (listErr) throw listErr;
+    const position = (lastList?.position ?? -1) + 1;
+    const listId = randomUUID();
 
     // Create default statuses for the new list
-    const defaultStatuses = [
+    const defaultStatusTemplates = [
       { name: 'To Do', color: '#8A9CC8', type: 'open', position: 0 },
       { name: 'In Progress', color: '#F59E0B', type: 'in_progress', position: 1 },
       { name: 'In Review', color: '#6633FF', type: 'review', position: 2 },
       { name: 'Blocked', color: '#EF4444', type: 'blocked', position: 3 },
       { name: 'Done', color: '#22C55E', type: 'closed', position: 4 },
     ];
-    await supabaseAdmin.from('statuses').insert(
-      defaultStatuses.map(s => ({ ...s, list_id: list.id }))
-    );
 
-    const { data: fullList } = await supabaseAdmin
-      .from('lists').select('*, statuses(*)').eq('id', list.id).single();
+    const listStatuses = defaultStatusTemplates.map(s => ({
+      ...s,
+      id: randomUUID(),
+      list_id: listId
+    }));
 
-    return NextResponse.json(fullList, { status: 201 });
+    await db.collection('statuses').insertMany(listStatuses);
+
+    const newList = {
+      id: listId,
+      space_id,
+      folder_id: folder_id || null,
+      name,
+      color: color || null,
+      position,
+      created_by: creator?.id || null,
+      created_at: new Date().toISOString(),
+      statuses: listStatuses
+    };
+
+    await db.collection('lists').insertOne(newList);
+    return NextResponse.json(newList, { status: 201 });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
@@ -70,12 +83,16 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const spaceId = searchParams.get('space_id');
 
-    let query = supabaseAdmin.from('lists').select('*, statuses(*)').order('position', { ascending: true });
-    if (spaceId) query = query.eq('space_id', spaceId);
+    const db = await getDb();
+    const query: any = {};
+    if (spaceId) query.space_id = spaceId;
 
-    const { data, error } = await query;
-    if (error) throw error;
-    return NextResponse.json(data || []);
+    const lists = await db.collection('lists')
+      .find(query)
+      .sort({ position: 1, created_at: 1 })
+      .toArray();
+
+    return NextResponse.json(lists);
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

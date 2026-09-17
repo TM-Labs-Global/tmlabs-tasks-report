@@ -2,7 +2,6 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/shared/api/supabase';
 
 interface WorkspaceContextType {
   spaces: any[];
@@ -103,30 +102,29 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     fetchData();
   }, [fetchData]);
 
-  // Realtime subscription setup
+  // Automatic background polling every 15 seconds for live team sync
   useEffect(() => {
-    if (!supabase) return;
+    const interval = setInterval(() => {
+      fetch('/api/workspace/data')
+        .then(res => {
+          if (!res.ok) return null;
+          return res.json();
+        })
+        .then(data => {
+          if (data) {
+            if (data.members) setMembers(data.members);
+            if (data.spaces) setSpaces(data.spaces);
+            if (data.tasks) {
+              const normalized = data.tasks.map(normalizeSupabaseTask);
+              setTasks(normalized);
+            }
+          }
+        })
+        .catch(() => {});
+    }, 15000);
 
-    const channel = supabase
-      .channel('workspace_realtime_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => {
-        refreshData();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'task_assignees' }, () => {
-        refreshData();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, () => {
-        refreshData();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
-        refreshData();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [refreshData]);
+    return () => clearInterval(interval);
+  }, [normalizeSupabaseTask]);
 
   return (
     <WorkspaceContext.Provider value={{

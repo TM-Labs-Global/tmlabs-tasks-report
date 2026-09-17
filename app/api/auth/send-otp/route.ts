@@ -12,7 +12,8 @@ function validateEmail(email: string): boolean {
 
 export async function POST(request: Request) {
   try {
-    const { email } = await request.json();
+    const body = await request.json() as { email?: string };
+    const { email } = body;
 
     if (!email) {
       return NextResponse.json({ error: 'Email address is required' }, { status: 400 });

@@ -4,7 +4,8 @@ const BASE_URL = 'https://api.clickup.com/api/v2';
 
 export async function POST(request: Request) {
   try {
-    const { endpoint, method = 'GET', body, customToken } = await request.json();
+    const reqBody = await request.json() as { endpoint?: string; method?: string; body?: any; customToken?: string };
+    const { endpoint, method = 'GET', body, customToken } = reqBody;
     
     // Use the custom token from client if provided, otherwise fallback to server-side env var
     const token = customToken || process.env.CLICKUP_API_TOKEN;
@@ -22,10 +23,10 @@ export async function POST(request: Request) {
       body: body ? JSON.stringify(body) : undefined,
     });
 
-    const data = await response.json();
+    const data: any = await response.json();
     
     if (!response.ok) {
-      return NextResponse.json({ error: data.err || 'ClickUp API error' }, { status: response.status });
+      return NextResponse.json({ error: data?.err || 'ClickUp API error' }, { status: response.status });
     }
 
     return NextResponse.json(data);

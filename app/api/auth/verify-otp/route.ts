@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { getOTP, deleteOTP, addLog, getUserByEmail, setUserPassword, saveUser } from '@/shared/utils/db';
+import { getOTP, deleteOTP, addLog, setUserPassword } from '@/shared/utils/db';
 import { signSession } from '@/shared/utils/session';
-import { supabaseAdmin } from '@/shared/utils/supabaseAdmin';
 
 export async function POST(request: Request) {
   try {
-    const { email, code, password } = await request.json();
+    const body = await request.json() as { email?: string; code?: string; password?: string };
+    const { email, code, password } = body;
 
     if (!email || !code) {
       return NextResponse.json({ error: 'Email and verification code are required.' }, { status: 400 });
@@ -39,42 +39,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Password must be at least 6 characters long.' }, { status: 400 });
     }
 
-    // Save new password locally
+    // Save new password in MongoDB Atlas
     const user = await setUserPassword(normalizedEmail, password.trim());
 
     // Clean up OTP record
     await deleteOTP(normalizedEmail);
 
-    // Sync with Supabase Auth & profiles if available
-    try {
-      if (supabaseAdmin) {
-        const { data: { users } } = await supabaseAdmin.auth.admin.listUsers();
-        const existingAuthUser = users?.find(u => u.email?.toLowerCase() === normalizedEmail);
-
-        if (existingAuthUser) {
-          await supabaseAdmin.auth.admin.updateUserById(existingAuthUser.id, { password: password.trim() });
-        } else {
-          await supabaseAdmin.auth.admin.createUser({
-            email: normalizedEmail,
-            password: password.trim(),
-            email_confirm: true,
-          });
-        }
-
-        await supabaseAdmin
-          .from('profiles')
-          .upsert({
-            email: normalizedEmail,
-            role: user.role,
-            status: 'active',
-            full_name: user.fullName || normalizedEmail.split('@')[0],
-          }, { onConflict: 'email' });
-      }
-    } catch (supabaseErr) {
-      console.warn('Supabase sync warning (ignorable if offline):', supabaseErr);
-    }
-
-    // Create session log entry
+    // Create session log entry in MongoDB
     const logId = await addLog(normalizedEmail);
 
     // Sign session token (strict 24-hour expiration)

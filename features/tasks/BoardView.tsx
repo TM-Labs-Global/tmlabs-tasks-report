@@ -1,16 +1,16 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { 
   Plus, 
   Calendar as CalendarIcon, 
-  Paperclip, 
-  MessageSquare,
+  Eye,
+  EyeOff,
+  CheckCircle2,
   MoreHorizontal
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { useAuth } from '@/shared/context/AuthContext';
@@ -32,14 +32,20 @@ export function BoardView({
 }: BoardViewProps) {
   const { user } = useAuth();
   const role = user?.role || 'staff';
+  const [showClosed, setShowClosed] = useState(false);
+  const [hideEmptyColumns, setHideEmptyColumns] = useState(true);
+
+  const isClosedTask = (t: any) => {
+    const sName = (t.status || '').toLowerCase();
+    return t.status_type === 'closed' || sName === 'complete' || sName === 'closed' || sName === 'done';
+  };
+
+  const visibleTasks = showClosed ? tasks : tasks.filter(t => !isClosedTask(t));
 
   const onDragEnd = async (result: any) => {
     const { destination, source, draggableId } = result;
     if (!destination) return;
-
-    // Check if column changed
     if (destination.droppableId === source.droppableId) return;
-
     const newStatusId = destination.droppableId;
     await onUpdateStatus(draggableId, newStatusId);
   };
@@ -73,11 +79,45 @@ export function BoardView({
     return 'bg-slate-500/10 text-slate-500 border-slate-700/20';
   };
 
+  const activeStatuses = hideEmptyColumns
+    ? statuses.filter(s => visibleTasks.some(t => t.status_id === s.id || t.status === s.name))
+    : statuses;
+
   return (
+    <div className="space-y-3">
+      {/* Board toolbar */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <button
+          onClick={() => setHideEmptyColumns(!hideEmptyColumns)}
+          className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-semibold border transition-colors cursor-pointer ${
+            hideEmptyColumns
+              ? 'bg-white/10 text-primary border-white/10'
+              : 'bg-transparent text-secondary border-white/8 hover:bg-white/5 hover:text-primary'
+          }`}
+          title={hideEmptyColumns ? 'Show all columns including empty ones' : 'Hide columns with no tasks'}
+        >
+          {hideEmptyColumns ? <EyeOff size={12} /> : <Eye size={12} />}
+          {hideEmptyColumns ? 'Hide Empty Columns' : 'Show Empty Columns'}
+        </button>
+
+        <button
+          onClick={() => setShowClosed(!showClosed)}
+          className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-semibold border transition-colors cursor-pointer ${
+            showClosed
+              ? 'bg-brand-pink/20 text-brand-pink border-brand-pink/40'
+              : 'bg-transparent text-secondary border-white/8 hover:bg-white/5 hover:text-primary'
+          }`}
+          title={showClosed ? 'Hide completed tasks' : 'Show completed/archived tasks'}
+        >
+          <CheckCircle2 size={12} />
+          {showClosed ? '✓ Show Archive' : 'Show Archive'}
+        </button>
+      </div>
+
     <DragDropContext onDragEnd={onDragEnd}>
-      <div className="flex gap-4 overflow-x-auto pb-4 select-none min-h-[70vh] items-start">
-        {statuses.map(status => {
-          const statusTasks = tasks.filter(t => t.status_id === status.id || t.status === status.name);
+      <div className="flex gap-4 overflow-x-auto pb-4 select-none min-h-[60vh] items-start">
+        {activeStatuses.map(status => {
+          const statusTasks = visibleTasks.filter(t => t.status_id === status.id || t.status === status.name);
           
           return (
             <div 
@@ -206,5 +246,6 @@ export function BoardView({
         })}
       </div>
     </DragDropContext>
+    </div>
   );
 }

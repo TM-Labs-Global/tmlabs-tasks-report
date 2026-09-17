@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySession } from '@/shared/utils/session';
-import { supabaseAdmin } from '@/shared/utils/supabaseAdmin';
+import { getDb } from '@/shared/utils/mongoClient';
+import { randomUUID } from 'crypto';
 
 // GET /api/workspace/statuses?list_id=...
 export async function GET(request: Request) {
@@ -10,14 +11,13 @@ export async function GET(request: Request) {
     const listId = searchParams.get('list_id');
     if (!listId) return NextResponse.json({ error: 'list_id is required' }, { status: 400 });
 
-    const { data, error } = await supabaseAdmin
-      .from('statuses')
-      .select('*')
-      .eq('list_id', listId)
-      .order('position', { ascending: true });
+    const db = await getDb();
+    const statuses = await db.collection('statuses')
+      .find({ list_id: listId })
+      .sort({ position: 1 })
+      .toArray();
 
-    if (error) throw error;
-    return NextResponse.json(data || []);
+    return NextResponse.json(statuses);
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
@@ -34,25 +34,40 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const body = await request.json();
+    const body = await request.json() as any;
     const { list_id, name, color, type } = body;
     if (!list_id || !name || !type) {
       return NextResponse.json({ error: 'list_id, name, and type are required' }, { status: 400 });
     }
 
-    const { data: lastStatus } = await supabaseAdmin
-      .from('statuses').select('position').eq('list_id', list_id)
-      .order('position', { ascending: false }).limit(1).maybeSingle();
+    const db = await getDb();
+    const lastStatus = await db.collection('statuses')
+      .find({ list_id })
+      .sort({ position: -1 })
+      .limit(1)
+      .next();
+
     const position = (lastStatus?.position ?? -1) + 1;
+    const statusId = randomUUID();
 
-    const { data, error } = await supabaseAdmin
-      .from('statuses')
-      .insert({ list_id, name, color: color || '#8A9CC8', type, position })
-      .select()
-      .single();
+    const newStatus = {
+      id: statusId,
+      list_id,
+      name,
+      color: color || '#8A9CC8',
+      type,
+      position
+    };
 
-    if (error) throw error;
-    return NextResponse.json(data, { status: 201 });
+    await Promise.all([
+      db.collection('statuses').insertOne(newStatus),
+      db.collection('lists').updateOne(
+        { id: list_id },
+        { $push: { statuses: newStatus } as any }
+      )
+    ]);
+
+    return NextResponse.json(newStatus, { status: 201 });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

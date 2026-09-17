@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySession } from '@/shared/utils/session';
-import { supabaseAdmin } from '@/shared/utils/supabaseAdmin';
+import { getDb } from '@/shared/utils/mongoClient';
 
 // PATCH /api/workspace/spaces/[spaceId]
 export async function PATCH(
@@ -18,7 +18,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const body = await request.json();
+    const body = await request.json() as any;
     const { name, color, icon, position } = body;
 
     const updateData: any = {};
@@ -27,15 +27,14 @@ export async function PATCH(
     if (icon !== undefined) updateData.icon = icon;
     if (position !== undefined) updateData.position = position;
 
-    const { data, error } = await supabaseAdmin
-      .from('spaces')
-      .update(updateData)
-      .eq('id', spaceId)
-      .select()
-      .single();
+    const db = await getDb();
+    const updated = await db.collection('spaces').findOneAndUpdate(
+      { id: spaceId },
+      { $set: updateData },
+      { returnDocument: 'after' }
+    );
 
-    if (error) throw error;
-    return NextResponse.json(data);
+    return NextResponse.json(updated);
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
@@ -56,42 +55,24 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Cascade delete of spaces: tasks, lists, folders, spaces
-    // Since folders and lists reference space_id, we can find lists/folders first or let the database handle it
-    // Wait, DB might not have CASCADE deletes for lists and folders if they are configured manually.
-    // Let's manually clean up in foreign key order:
-    // 1. Get folders and lists
-    const { data: folders } = await supabaseAdmin.from('folders').select('id').eq('space_id', spaceId);
-    const { data: lists } = await supabaseAdmin.from('lists').select('id').eq('space_id', spaceId);
-    
-    const folderIds = (folders || []).map(f => f.id);
-    const listIds = (lists || []).map(l => l.id);
+    const db = await getDb();
 
-    if (listIds.length > 0) {
-      // Get task ids
-      const { data: tasks } = await supabaseAdmin.from('tasks').select('id').in('list_id', listIds);
-      const taskIds = (tasks || []).map(t => t.id);
-      
-      if (taskIds.length > 0) {
-        await supabaseAdmin.from('task_assignees').delete().in('task_id', taskIds);
-        await supabaseAdmin.from('task_tag_links').delete().in('task_id', taskIds);
-        await supabaseAdmin.from('task_dependencies').delete().in('task_id', taskIds);
-        await supabaseAdmin.from('task_dependencies').delete().in('depends_on_task_id', taskIds);
-        await supabaseAdmin.from('comments').delete().in('task_id', taskIds);
-        await supabaseAdmin.from('notifications').delete().in('task_id', taskIds);
-        await supabaseAdmin.from('task_history').delete().in('task_id', taskIds);
-        await supabaseAdmin.from('tasks').delete().in('id', taskIds);
-      }
-      await supabaseAdmin.from('statuses').delete().in('list_id', listIds);
-      await supabaseAdmin.from('lists').delete().in('id', listIds);
-    }
+    // Find all lists in this space
+    const lists = await db.collection('lists').find({ space_id: spaceId }).toArray();
+    const listIds = lists.map(l => l.id);
 
-    if (folderIds.length > 0) {
-      await supabaseAdmin.from('folders').delete().in('id', folderIds);
-    }
+    // Find all tasks in these lists
+    const tasks = await db.collection('tasks').find({ list_id: { $in: listIds } }).toArray();
+    const taskIds = tasks.map(t => t.id);
 
-    const { error } = await supabaseAdmin.from('spaces').delete().eq('id', spaceId);
-    if (error) throw error;
+    await Promise.all([
+      db.collection('tasks').deleteMany({ list_id: { $in: listIds } }),
+      db.collection('comments').deleteMany({ task_id: { $in: taskIds } }),
+      db.collection('notifications').deleteMany({ task_id: { $in: taskIds } }),
+      db.collection('lists').deleteMany({ space_id: spaceId }),
+      db.collection('folders').deleteMany({ space_id: spaceId }),
+      db.collection('spaces').deleteOne({ id: spaceId })
+    ]);
 
     return NextResponse.json({ success: true });
   } catch (err: any) {

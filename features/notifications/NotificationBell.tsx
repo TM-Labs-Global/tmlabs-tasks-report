@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Bell, Check, Loader2 } from 'lucide-react';
-import { supabase } from '@/shared/api/supabase';
 import { useAuth } from '@/shared/context/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
@@ -35,25 +34,14 @@ export function NotificationBell() {
     }
   }, [user]);
 
-  // Realtime listener for new notifications
+  // Periodic check for new notifications every 30 seconds
   useEffect(() => {
-    if (!supabase || !user) return;
+    if (!user) return;
+    const interval = setInterval(() => {
+      fetchNotifications();
+    }, 30000);
 
-    const channel = supabase
-      .channel('realtime_user_notifications')
-      .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
-        table: 'notifications' 
-      }, (payload) => {
-        // If it's for current user, prepend it
-        fetchNotifications();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => clearInterval(interval);
   }, [user]);
 
   // Close dropdown on click outside

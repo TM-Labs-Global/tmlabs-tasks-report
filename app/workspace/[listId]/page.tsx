@@ -32,7 +32,6 @@ import {
   Columns as ColumnsIcon,
 } from 'lucide-react';
 import Link from 'next/link';
-
 import { TaskCreateModal } from '@/features/tasks/TaskCreateModal';
 
 export default function ListDetailPage() {
@@ -247,17 +246,37 @@ export default function ListDetailPage() {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-48 bg-slate-900 border border-slate-800 text-white p-1 shadow-xl">
-              <DropdownMenuItem className="flex items-center gap-2 text-xs font-medium text-slate-400 cursor-not-allowed py-2">
-                <Clock size={14} /> Timeline <span className="ml-auto text-[10px] text-brand-pink font-bold">Soon</span>
+              <DropdownMenuItem
+                onClick={() => handleTabChange('timeline')}
+                className={`flex items-center gap-2 text-xs font-medium py-2 cursor-pointer hover:bg-white/8 ${
+                  activeTab === 'timeline' ? 'text-brand-pink' : 'text-slate-300'
+                }`}
+              >
+                <Clock size={14} /> Timeline
               </DropdownMenuItem>
-              <DropdownMenuItem className="flex items-center gap-2 text-xs font-medium text-slate-400 cursor-not-allowed py-2">
-                <TableIcon size={14} /> Table <span className="ml-auto text-[10px] text-brand-pink font-bold">Soon</span>
+              <DropdownMenuItem
+                onClick={() => handleTabChange('table')}
+                className={`flex items-center gap-2 text-xs font-medium py-2 cursor-pointer hover:bg-white/8 ${
+                  activeTab === 'table' ? 'text-brand-pink' : 'text-slate-300'
+                }`}
+              >
+                <TableIcon size={14} /> Table
               </DropdownMenuItem>
-              <DropdownMenuItem className="flex items-center gap-2 text-xs font-medium text-slate-400 cursor-not-allowed py-2">
-                <BarChart2 size={14} /> Workload <span className="ml-auto text-[10px] text-brand-pink font-bold">Soon</span>
+              <DropdownMenuItem
+                onClick={() => handleTabChange('workload')}
+                className={`flex items-center gap-2 text-xs font-medium py-2 cursor-pointer hover:bg-white/8 ${
+                  activeTab === 'workload' ? 'text-brand-pink' : 'text-slate-300'
+                }`}
+              >
+                <BarChart2 size={14} /> Workload
               </DropdownMenuItem>
-              <DropdownMenuItem className="flex items-center gap-2 text-xs font-medium text-slate-400 cursor-not-allowed py-2">
-                <CalendarIcon size={14} /> Calendar <span className="ml-auto text-[10px] text-brand-pink font-bold">Soon</span>
+              <DropdownMenuItem
+                onClick={() => handleTabChange('calendar')}
+                className={`flex items-center gap-2 text-xs font-medium py-2 cursor-pointer hover:bg-white/8 ${
+                  activeTab === 'calendar' ? 'text-brand-pink' : 'text-slate-300'
+                }`}
+              >
+                <CalendarIcon size={14} /> Calendar
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -348,7 +367,7 @@ export default function ListDetailPage() {
             onAddTask={handleAddTask}
             onUpdateTask={handleUpdateTask}
           />
-        ) : (
+        ) : activeTab === 'board' ? (
           <BoardView
             tasks={listTasks}
             statuses={statuses}
@@ -358,7 +377,159 @@ export default function ListDetailPage() {
               handleAddTask('New Task', statusId);
             }}
           />
-        )}
+        ) : activeTab === 'table' ? (
+          // Table view – flat spreadsheet-style list
+          <div className="space-y-3">
+            <p className="text-xs text-secondary px-1">Showing all tasks in a flat table. Click any row to open details.</p>
+            <div className="overflow-x-auto rounded-xl border border-white/8">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-elevated/40 border-b border-white/8 text-secondary uppercase tracking-wider">
+                    <th className="text-left px-4 py-3 font-bold">Task</th>
+                    <th className="text-left px-4 py-3 font-bold">Status</th>
+                    <th className="text-left px-4 py-3 font-bold">Priority</th>
+                    <th className="text-left px-4 py-3 font-bold">Assignee</th>
+                    <th className="text-left px-4 py-3 font-bold">Due Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {listTasks.map((task: any) => (
+                    <tr
+                      key={task.id}
+                      onClick={() => setSelectedTaskId(task.id)}
+                      className="border-b border-white/4 hover:bg-white/4 cursor-pointer transition-colors"
+                    >
+                      <td className="px-4 py-2.5 font-medium text-primary max-w-[280px] truncate">{task.name}</td>
+                      <td className="px-4 py-2.5">
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: statuses.find((s: any) => s.id === task.status_id || s.name === task.status)?.color || '#94a3b8' }} />
+                          <span className="text-secondary">{task.status}</span>
+                        </span>
+                      </td>
+                      <td className="px-4 py-2.5 text-secondary">
+                        {task.priority === '1' || task.priority === 1 ? '🔴 Urgent' :
+                         task.priority === '2' || task.priority === 2 ? '🟠 High' :
+                         task.priority === '3' || task.priority === 3 ? '🔵 Normal' :
+                         task.priority === '4' || task.priority === 4 ? '⬜ Low' : '—'}
+                      </td>
+                      <td className="px-4 py-2.5 text-secondary">
+                        {task.assignees?.length > 0
+                          ? task.assignees.map((a: any) => a.full_name || a.username || a.email || a.profile?.full_name || '?').join(', ')
+                          : <span className="text-muted">Unassigned</span>}
+                      </td>
+                      <td className="px-4 py-2.5 text-secondary">
+                        {task.due_date ? new Date(task.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : <span className="text-muted">—</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {listTasks.length === 0 && (
+                <div className="py-12 text-center text-secondary text-sm">No tasks in this list.</div>
+              )}
+            </div>
+          </div>
+        ) : activeTab === 'calendar' ? (
+          // Calendar embed – link to /calendar filtered by this list
+          <div className="flex flex-col items-center justify-center py-12 gap-4 text-secondary">
+            <CalendarIcon size={36} className="text-brand-pink/60" />
+            <div className="text-center">
+              <h3 className="font-bold text-primary text-base mb-1">Calendar View</h3>
+              <p className="text-sm text-secondary max-w-sm">View all tasks with due dates on a calendar. The full calendar is available at the global level.</p>
+            </div>
+            <Link href="/calendar" className="flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-pink text-white text-sm font-bold hover:bg-brand-pink/90 transition-colors">
+              <CalendarIcon size={14} /> Open Calendar
+            </Link>
+          </div>
+        ) : activeTab === 'timeline' ? (
+          // Timeline – sorted Gantt-style list
+          <div className="space-y-2">
+            <p className="text-xs text-secondary px-1">Tasks sorted by due date (earliest first).</p>
+            {[...listTasks]
+              .filter(t => t.due_date)
+              .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
+              .map((task: any) => {
+                const daysLeft = Math.ceil((new Date(task.due_date).getTime() - Date.now()) / 86400000);
+                const isOverdue = daysLeft < 0;
+                return (
+                  <div
+                    key={task.id}
+                    onClick={() => setSelectedTaskId(task.id)}
+                    className="flex items-center gap-4 p-3 rounded-xl bg-elevated/20 border border-white/6 hover:bg-elevated/40 cursor-pointer transition-colors"
+                  >
+                    <div className="w-1 self-stretch rounded-full" style={{ backgroundColor: statuses.find((s: any) => s.id === task.status_id || s.name === task.status)?.color || '#94a3b8' }} />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-primary text-sm truncate">{task.name}</p>
+                      <p className="text-xs text-secondary">{task.status}</p>
+                    </div>
+                    <div className={`text-xs font-bold px-2 py-1 rounded-lg ${
+                      isOverdue ? 'bg-red-500/15 text-red-400' :
+                      daysLeft === 0 ? 'bg-amber-500/15 text-amber-400' :
+                      'bg-white/6 text-secondary'
+                    }`}>
+                      {isOverdue ? `${Math.abs(daysLeft)}d overdue` : daysLeft === 0 ? 'Due today' : `${daysLeft}d left`}
+                    </div>
+                    <div className="text-xs text-secondary shrink-0">
+                      {new Date(task.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                    </div>
+                  </div>
+                );
+              })}
+            {listTasks.filter(t => t.due_date).length === 0 && (
+              <div className="py-12 text-center text-secondary text-sm">No tasks with due dates in this list.</div>
+            )}
+          </div>
+        ) : activeTab === 'workload' ? (
+          // Workload – tasks grouped by assignee
+          <div className="space-y-4">
+            <p className="text-xs text-secondary px-1">Tasks grouped by team member.</p>
+            {(() => {
+              const assigneeMap = new Map<string, { name: string; tasks: any[] }>();
+              listTasks.forEach((task: any) => {
+                if (task.assignees && task.assignees.length > 0) {
+                  task.assignees.forEach((a: any) => {
+                    const name = a.full_name || a.username || a.email || a.profile?.full_name || 'Unknown';
+                    const id = a.id || a.profile?.id || name;
+                    if (!assigneeMap.has(id)) assigneeMap.set(id, { name, tasks: [] });
+                    assigneeMap.get(id)!.tasks.push(task);
+                  });
+                } else {
+                  if (!assigneeMap.has('__unassigned__')) assigneeMap.set('__unassigned__', { name: 'Unassigned', tasks: [] });
+                  assigneeMap.get('__unassigned__')!.tasks.push(task);
+                }
+              });
+              return Array.from(assigneeMap.entries()).map(([id, { name, tasks: memberTasks }]) => (
+                <div key={id} className="rounded-xl border border-white/8 overflow-hidden">
+                  <div className="flex items-center gap-3 px-4 py-3 bg-elevated/30 border-b border-white/6">
+                    <div className="w-7 h-7 rounded-full bg-brand-pink/20 text-brand-pink flex items-center justify-center font-bold text-xs uppercase">
+                      {name.charAt(0)}
+                    </div>
+                    <span className="font-bold text-sm text-primary">{name}</span>
+                    <span className="ml-auto text-xs text-muted bg-white/6 px-2 py-0.5 rounded-full">{memberTasks.length} tasks</span>
+                  </div>
+                  <div className="divide-y divide-white/4">
+                    {memberTasks.slice(0, 10).map((task: any) => (
+                      <div
+                        key={task.id}
+                        onClick={() => setSelectedTaskId(task.id)}
+                        className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/4 cursor-pointer transition-colors"
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: statuses.find((s: any) => s.id === task.status_id || s.name === task.status)?.color || '#94a3b8' }} />
+                        <span className="text-sm text-primary flex-1 truncate">{task.name}</span>
+                        <span className="text-xs text-secondary shrink-0">
+                          {task.due_date ? new Date(task.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '—'}
+                        </span>
+                      </div>
+                    ))}
+                    {memberTasks.length > 10 && (
+                      <div className="px-4 py-2 text-xs text-muted">+{memberTasks.length - 10} more tasks</div>
+                    )}
+                  </div>
+                </div>
+              ));
+            })()}
+          </div>
+        ) : null}
       </div>
 
       {/* Task Create Modal */}

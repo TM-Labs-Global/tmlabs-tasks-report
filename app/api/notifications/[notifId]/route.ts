@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySession } from '@/shared/utils/session';
-import { supabaseAdmin } from '@/shared/utils/supabaseAdmin';
+import { getDb } from '@/shared/utils/mongoClient';
 
 // PATCH /api/notifications/[notifId]
 export async function PATCH(
@@ -16,18 +16,17 @@ export async function PATCH(
     const session = await verifySession(token);
     if (!session) return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
 
-    const body = await request.json();
+    const body = await request.json() as any;
     const { is_read } = body;
 
-    const { data, error } = await supabaseAdmin
-      .from('notifications')
-      .update({ is_read: !!is_read })
-      .eq('id', notifId)
-      .select()
-      .single();
+    const db = await getDb();
+    const updated = await db.collection('notifications').findOneAndUpdate(
+      { id: notifId },
+      { $set: { is_read: !!is_read } },
+      { returnDocument: 'after' }
+    );
 
-    if (error) throw error;
-    return NextResponse.json(data);
+    return NextResponse.json(updated);
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

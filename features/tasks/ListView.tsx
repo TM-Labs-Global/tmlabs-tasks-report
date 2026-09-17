@@ -11,10 +11,14 @@ import {
   Trash2,
   ExternalLink,
   Flag,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { format } from 'date-fns';
 import { useAuth } from '@/shared/context/AuthContext';
+import { DatePicker } from './DatePicker';
+import { TaskCreateModal } from './TaskCreateModal';
 
 interface ListViewProps {
   listId: string;
@@ -24,7 +28,7 @@ interface ListViewProps {
   onTaskClick: (taskId: string) => void;
   onUpdateStatus: (taskId: string, statusId: string) => Promise<void>;
   onDeleteTask: (taskId: string) => Promise<void>;
-  onAddTask: (taskName: string, statusId?: string) => Promise<void>;
+  onAddTask: (taskName: string, statusId?: string, fields?: Record<string, any>) => Promise<void>;
   onUpdateTask?: (taskId: string, fields: Record<string, any>) => Promise<void>;
 }
 
@@ -70,7 +74,6 @@ function AvatarChip({ name, src, size = 22 }: { name: string; src?: string; size
   );
 }
 
-
 function TaskRow({
   task,
   statuses,
@@ -80,6 +83,7 @@ function TaskRow({
   onUpdateStatus,
   onDeleteTask,
   onUpdateTask,
+  onAddSubtask,
 }: {
   task: any;
   statuses: any[];
@@ -89,14 +93,11 @@ function TaskRow({
   onUpdateStatus: (taskId: string, statusId: string) => Promise<void>;
   onDeleteTask: (taskId: string) => Promise<void>;
   onUpdateTask?: (taskId: string, fields: Record<string, any>) => Promise<void>;
+  onAddSubtask?: (task: any) => void;
 }) {
   const isOverdue = task.flags?.isOverdue;
   const isBlocked = task.flags?.isBlocked;
   const priority = getPriorityConfig(task.priority);
-
-  const dueDateText = task.due_date
-    ? format(new Date(task.due_date), 'MMM d')
-    : null;
 
   // ── Inline name edit state ───────────────────────────────────────────────
   const [editingName, setEditingName] = useState(false);
@@ -123,9 +124,9 @@ function TaskRow({
 
   return (
     <div
-      className={`cl-task-row${isBlocked ? ' cl-task-row--blocked' : ''}${isOverdue ? ' cl-task-row--overdue' : ''}`}
+      className={`cl-task-row group${isBlocked ? ' cl-task-row--blocked' : ''}${isOverdue ? ' cl-task-row--overdue' : ''}`}
     >
-      {/* ── Col 1: Status circle + Task name ── */}
+      {/* ── Col 1: Status circle + Task name + Add Subtask '+' button ── */}
       <div className="cl-task-col cl-task-col--name">
         {/* Mini status circle (clickable status switcher) */}
         <DropdownMenu>
@@ -137,9 +138,9 @@ function TaskRow({
               <span
                 className="cl-status-dot"
                 style={{
-                  backgroundColor: task.status.toLowerCase().includes('progress')
+                  backgroundColor: task.status?.toLowerCase().includes('progress')
                     ? '#645BFF'
-                    : (statuses.find(s => s.name === task.status)?.color || '#94A3B8')
+                    : (statuses.find(s => s.name === task.status || s.id === task.status_id)?.color || '#94A3B8')
                 }}
               />
             </button>
@@ -171,19 +172,36 @@ function TaskRow({
             }}
           />
         ) : (
-          <div className="flex items-center gap-2 overflow-hidden">
+          <div className="flex items-center gap-2 overflow-hidden flex-1 min-w-0">
             <span
-              className={`cl-task-name${role === 'product_manager' ? ' cl-task-name--editable' : ''}`}
+              className={`cl-task-name truncate${role === 'product_manager' ? ' cl-task-name--editable' : ''}`}
               onClick={() => onTaskClick(task.id)}
               onDoubleClick={startEditing}
               title={role === 'product_manager' ? 'Double-click to edit name' : task.name}
             >
               {task.name}
             </span>
+
+            {/* Subtasks Count Badge */}
             {(task.subtasks?.length > 0 || task.subtasks_count > 0) && (
               <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#8A9CC8] bg-white/5 px-1.5 py-0.5 rounded flex-shrink-0" title="Subtasks">
                 ↳ {task.subtasks?.length || task.subtasks_count}
               </span>
+            )}
+
+            {/* Quick '+' Add Subtask Button directly on row hover */}
+            {role === 'product_manager' && onAddSubtask && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAddSubtask(task);
+                }}
+                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-secondary hover:text-brand-pink hover:bg-white/5 rounded text-[11px] flex items-center gap-0.5 cursor-pointer shrink-0"
+                title={`Add subtask to "${task.name}"`}
+              >
+                <Plus size={12} />
+                <span className="text-[10px] hidden sm:inline">Subtask</span>
+              </button>
             )}
           </div>
         )}
@@ -214,7 +232,7 @@ function TaskRow({
                   <div className="cl-avatar-stack">
                     {task.assignees.slice(0, 3).map((a: any, i: number) => (
                       <div key={i} className="cl-avatar-wrap">
-                        <AvatarChip name={a.username || a.email || '?'} src={a.profilePicture} size={22} />
+                        <AvatarChip name={a.full_name || a.username || a.email || a.profile?.full_name || '?'} src={a.profilePicture || a.profile?.profilePicture} size={22} />
                       </div>
                     ))}
                     {task.assignees.length > 3 && (
@@ -250,7 +268,7 @@ function TaskRow({
             <div className="cl-avatar-stack">
               {task.assignees.slice(0, 3).map((a: any, i: number) => (
                 <div key={i} className="cl-avatar-wrap">
-                  <AvatarChip name={a.username || a.email || '?'} src={a.profilePicture} size={22} />
+                  <AvatarChip name={a.full_name || a.username || a.email || a.profile?.full_name || '?'} src={a.profilePicture} size={22} />
                 </div>
               ))}
             </div>
@@ -260,27 +278,26 @@ function TaskRow({
         )}
       </div>
 
-      {/* ── Col 3: Due Date (Inline Editable) ── */}
+      {/* ── Col 3: Due Date (Interactive Calendar DatePicker) ── */}
       <div className="cl-task-col cl-task-col--due">
         {role === 'product_manager' && onUpdateTask ? (
-          <input
-            type="date"
-            value={task.due_date ? task.due_date.split('T')[0] : ''}
-            onChange={(e) => onUpdateTask(task.id, { due_date: e.target.value || null })}
-            className="bg-transparent text-xs text-secondary hover:text-primary cursor-pointer border-none focus:outline-none w-24"
-            title="Click to set due date"
+          <DatePicker
+            value={task.due_date}
+            onChange={(d) => onUpdateTask(task.id, { due_date: d || null })}
+            placeholder="Due date"
+            className="scale-90 -ml-2"
           />
-        ) : dueDateText ? (
+        ) : task.due_date ? (
           <span className={`cl-due-date${isOverdue ? ' cl-due-date--overdue' : ''}`}>
             <CalendarIcon size={12} />
-            {dueDateText}
+            {format(new Date(task.due_date), 'MMM d')}
           </span>
         ) : (
           <CalendarIcon size={14} className="cl-unassigned-icon" />
         )}
       </div>
 
-      {/* ── Col 4: Priority (Inline Dropdown Editable with Explicit Color Tooltips) ── */}
+      {/* ── Col 4: Priority (Inline Dropdown Editable) ── */}
       <div className="cl-task-col cl-task-col--priority">
         {role === 'product_manager' && onUpdateTask ? (
           <DropdownMenu>
@@ -348,6 +365,14 @@ function TaskRow({
             >
               <ExternalLink size={13} /> Open Details
             </DropdownMenuItem>
+            {role === 'product_manager' && onAddSubtask && (
+              <DropdownMenuItem
+                onClick={() => onAddSubtask(task)}
+                className="cl-status-menu-item"
+              >
+                <Plus size={13} /> Add Subtask
+              </DropdownMenuItem>
+            )}
             {role === 'product_manager' && (
               <DropdownMenuItem
                 onClick={() => {
@@ -365,7 +390,7 @@ function TaskRow({
   );
 }
 
-// ─── Inline "Add Task" row (ClickUp Style) ──────────────────────────────────
+// ─── Inline "Add Task" row ──────────────────────────────────────────────────
 function AddTaskRow({
   statusId,
   members = [],
@@ -378,7 +403,7 @@ function AddTaskRow({
   const [active, setActive] = useState(false);
   const [name, setName] = useState('');
   const [assigneeId, setAssigneeId] = useState('');
-  const [dueDate, setDueDate] = useState('');
+  const [dueDate, setDueDate] = useState<string | null>(null);
   const [priority, setPriority] = useState('3'); // Normal
 
   const submit = async (e?: React.FormEvent) => {
@@ -391,7 +416,6 @@ function AddTaskRow({
       due_date: dueDate || undefined,
       priority,
     });
-    // Keep active so user can rapidly add another task sequentially
     setActive(true);
   };
 
@@ -408,7 +432,7 @@ function AddTaskRow({
   }
 
   return (
-    <form onSubmit={submit} className="cl-add-row-form flex-wrap lg:flex-nowrap gap-2">
+    <form onSubmit={submit} className="cl-add-row-form flex-wrap lg:flex-nowrap gap-2 items-center">
       <div className="w-4 h-4 rounded-full border border-dashed border-[#8A9CC8] flex-shrink-0" />
       <input
         autoFocus
@@ -438,13 +462,12 @@ function AddTaskRow({
           ))}
         </select>
 
-        {/* Due Date Picker */}
-        <input
-          type="date"
+        {/* DatePicker for Due Date */}
+        <DatePicker
           value={dueDate}
-          onChange={e => setDueDate(e.target.value)}
-          className="h-7 px-2 rounded text-[11px] bg-bg-elevated border border-border-default text-primary cursor-pointer focus:outline-none focus:border-brand-pink"
-          title="Due Date"
+          onChange={d => setDueDate(d || null)}
+          placeholder="Due date"
+          className="scale-90"
         />
 
         {/* Priority Selector */}
@@ -484,6 +507,7 @@ function StatusSection({
   onDeleteTask,
   onAddTask,
   onUpdateTask,
+  onAddSubtask,
 }: {
   status: any;
   tasks: any[];
@@ -495,6 +519,7 @@ function StatusSection({
   onDeleteTask: (taskId: string) => Promise<void>;
   onAddTask: (name: string, statusId: string, fields?: Record<string, any>) => Promise<void>;
   onUpdateTask?: (taskId: string, fields: Record<string, any>) => Promise<void>;
+  onAddSubtask?: (task: any) => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -529,7 +554,7 @@ function StatusSection({
         <span className="cl-section-count">{tasks.length}</span>
       </div>
 
-      {/* ── Column header row (shown once per status group) ── */}
+      {/* ── Column header row ── */}
       {!collapsed && (
         <>
           <div className="cl-col-header-row">
@@ -553,6 +578,7 @@ function StatusSection({
                 onUpdateStatus={onUpdateStatus}
                 onDeleteTask={onDeleteTask}
                 onUpdateTask={onUpdateTask}
+                onAddSubtask={onAddSubtask}
               />
             ))
           ) : (
@@ -586,24 +612,32 @@ export function ListView({
 
   const [search, setSearch] = useState('');
   const [showClosed, setShowClosed] = useState(false);
+  const [hideEmptyStatuses, setHideEmptyStatuses] = useState(true);
+  
+  // Subtask modal state for list view
+  const [subtaskParent, setSubtaskParent] = useState<{ id: string; name: string } | null>(null);
 
   // Filter tasks: exclude closed/completed tasks by default
+  const isClosedTask = (t: any) => {
+    const sName = (t.status || '').toLowerCase();
+    return t.status_type === 'closed' || sName === 'complete' || sName === 'closed' || sName === 'done';
+  };
+
   const visibleTasks = showClosed
     ? tasks
-    : tasks.filter(t => t.status_type !== 'closed');
+    : tasks.filter(t => !isClosedTask(t));
 
   const filteredTasks = search
     ? visibleTasks.filter(t => t.name.toLowerCase().includes(search.toLowerCase()))
     : visibleTasks;
 
-  // Determine ordered status list — use statuses array as the canonical order.
-  // Move "Backlog" or similar statuses to the end
+  // Determine ordered status list
   let orderedStatuses = statuses.length > 0
     ? [...statuses]
     : Array.from(new Map(filteredTasks.map(t => [t.status, { id: t.status_id || t.status, name: t.status, color: '#94A3B8' }])).values());
 
   // Reorder: Move Backlog/Archive statuses to the end
-  const backlogKeywords = ['backlog', 'archived', 'archive', 'done', 'closed'];
+  const backlogKeywords = ['backlog', 'archived', 'archive', 'done', 'closed', 'complete'];
   orderedStatuses = orderedStatuses.sort((a, b) => {
     const aIsBacklog = backlogKeywords.some(k => a.name.toLowerCase().includes(k));
     const bIsBacklog = backlogKeywords.some(k => b.name.toLowerCase().includes(k));
@@ -612,38 +646,102 @@ export function ListView({
     return 0;
   });
 
-  const handleAddTask = async (name: string, statusId?: string) => {
-    await onAddTask(name, statusId);
+  // Filter out empty status groups to eliminate visual noise (per user requirement)
+  const activeStatuses = hideEmptyStatuses
+    ? orderedStatuses.filter(status => {
+        const count = filteredTasks.filter(t => t.status === status.name || t.status_id === status.id).length;
+        return count > 0;
+      })
+    : orderedStatuses;
+
+  const handleAddTask = async (name: string, statusId?: string, fields?: Record<string, any>) => {
+    await onAddTask(name, statusId, fields);
+  };
+
+  const handleCreateSubtask = async (data: {
+    name: string;
+    statusId: string;
+    assigneeId?: string;
+    dueDate?: string;
+    priority?: string;
+    description?: string;
+    parent_task_id?: string | null;
+  }) => {
+    if (!subtaskParent) return;
+    try {
+      const res = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          list_id: listId,
+          parent_task_id: subtaskParent.id,
+          name: data.name,
+          status_id: data.statusId,
+          assignee_ids: data.assigneeId ? [data.assigneeId] : [],
+          due_date: data.dueDate,
+          priority: data.priority,
+          description: data.description,
+        }),
+      });
+
+      if (res.ok) {
+        setSubtaskParent(null);
+        if (onAddTask) {
+          // Trigger refresh through parent
+          await onAddTask('', undefined, { refreshOnly: true });
+        }
+      }
+    } catch (err) {
+      console.error('Failed to create subtask:', err);
+    }
   };
 
   return (
     <div className="cl-list-view">
       {/* ── Toolbar ── */}
-      <div className="cl-toolbar">
-        <div className="cl-search-wrap">
-          <svg className="cl-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
-          </svg>
-          <input
-            className="cl-search-input"
-            placeholder="Search tasks…"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
+      <div className="cl-toolbar flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="cl-search-wrap">
+            <svg className="cl-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+            </svg>
+            <input
+              className="cl-search-input"
+              placeholder="Search tasks…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </div>
+
+          {/* Toggle to Hide/Show Empty Statuses */}
+          <button
+            onClick={() => setHideEmptyStatuses(!hideEmptyStatuses)}
+            className={`cl-archive-toggle flex items-center gap-1.5 transition-colors cursor-pointer ${
+              hideEmptyStatuses ? 'text-primary bg-white/10' : 'text-muted'
+            }`}
+            title={hideEmptyStatuses ? 'Showing only active status groups. Click to show all.' : 'Showing all status groups. Click to hide empty ones.'}
+          >
+            {hideEmptyStatuses ? <EyeOff size={13} /> : <Eye size={13} />}
+            <span>{hideEmptyStatuses ? 'Hide Empty Groups' : 'Show Empty Groups'}</span>
+          </button>
         </div>
+
+        {/* Toggle to Show/Hide Archived Completed Tasks */}
         <button
           onClick={() => setShowClosed(!showClosed)}
-          className="cl-archive-toggle"
-          title={showClosed ? 'Hide archived tasks' : 'Show archived tasks'}
+          className={`cl-archive-toggle transition-colors cursor-pointer ${
+            showClosed ? 'bg-brand-pink/20 text-brand-pink border border-brand-pink/40' : ''
+          }`}
+          title={showClosed ? 'Hide completed tasks' : 'Show completed/archived tasks'}
         >
-          {showClosed ? '✓ Show Archive' : 'Show Archive'}
+          {showClosed ? '✓ Show Archive (Completed)' : 'Show Archive'}
         </button>
       </div>
 
       {/* ── Status sections ── */}
       <div className="cl-sections">
-        {orderedStatuses.map(status => {
-          const statusTasks = filteredTasks.filter(t => t.status === status.name);
+        {activeStatuses.map(status => {
+          const statusTasks = filteredTasks.filter(t => t.status === status.name || t.status_id === status.id);
           return (
             <StatusSection
               key={status.id}
@@ -657,16 +755,33 @@ export function ListView({
               onDeleteTask={onDeleteTask}
               onAddTask={handleAddTask}
               onUpdateTask={onUpdateTask}
+              onAddSubtask={(task) => setSubtaskParent({ id: task.id, name: task.name })}
             />
           );
         })}
 
-        {orderedStatuses.length === 0 && (
-          <div className="cl-empty-state">
-            No tasks or statuses configured for this list.
+        {activeStatuses.length === 0 && (
+          <div className="cl-empty-state text-center py-8 text-secondary">
+            {hideEmptyStatuses 
+              ? 'No active tasks in this list. Click "Show Empty Groups" or "+ Add Task" to create one.'
+              : 'No tasks or statuses configured for this list.'}
           </div>
         )}
       </div>
+
+      {/* Full Subtask Creation Modal */}
+      {subtaskParent && (
+        <TaskCreateModal
+          open={!!subtaskParent}
+          onOpenChange={(open) => !open && setSubtaskParent(null)}
+          statuses={statuses}
+          members={members}
+          defaultStatusId={statuses[0]?.id}
+          parentTaskId={subtaskParent.id}
+          parentTaskName={subtaskParent.name}
+          onCreateTask={handleCreateSubtask}
+        />
+      )}
 
       {/* ── Scoped styles ── */}
       <style>{`
@@ -678,9 +793,6 @@ export function ListView({
 
         /* === TOOLBAR === */
         .cl-toolbar {
-          display: flex;
-          align-items: center;
-          gap: 12px;
           margin-bottom: 16px;
         }
         .cl-search-wrap {
@@ -700,339 +812,293 @@ export function ListView({
         .cl-search-input {
           width: 100%;
           height: 32px;
-          padding: 0 10px 0 32px;
-          background: var(--color-surface-1);
+          background: rgba(255,255,255,0.04);
           border: 1px solid rgba(255,255,255,0.08);
           border-radius: 8px;
+          padding: 0 10px 0 32px;
           color: var(--color-text-primary);
-          font-size: 12.5px;
+          font-size: 12px;
           outline: none;
           transition: border-color 0.15s;
         }
         .cl-search-input:focus {
-          border-color: var(--color-brand-pink);
+          border-color: #FF3396;
         }
-        .cl-search-input::placeholder { color: var(--color-text-muted); }
-
+        .cl-search-input::placeholder {
+          color: var(--color-text-muted);
+        }
         .cl-archive-toggle {
-          padding: 6px 12px;
-          background: rgba(102, 51, 255, 0.1);
-          border: 1px solid rgba(102, 51, 255, 0.3);
-          color: #6633FF;
-          border-radius: 6px;
-          font-size: 12px;
+          display: inline-flex;
+          align-items: center;
+          height: 32px;
+          padding: 0 12px;
+          border-radius: 8px;
+          font-size: 11px;
           font-weight: 600;
+          color: var(--color-text-secondary);
+          background: rgba(255,255,255,0.04);
+          border: 1px solid rgba(255,255,255,0.08);
           cursor: pointer;
-          transition: all 0.15s;
-          white-space: nowrap;
+          transition: background 0.15s, color 0.15s;
         }
         .cl-archive-toggle:hover {
-          background: rgba(102, 51, 255, 0.2);
-          border-color: rgba(102, 51, 255, 0.5);
-        }
-
-        /* === SECTIONS WRAPPER === */
-        .cl-sections {
-          display: flex;
-          flex-direction: column;
-          gap: 0;
-          border: 1px solid var(--border-default);
-          border-radius: 10px;
-          overflow: hidden;
-          background: var(--bg-card);
+          background: rgba(255,255,255,0.08);
+          color: var(--color-text-primary);
         }
 
         /* === STATUS SECTION === */
-        .cl-status-section {
-          border-bottom: 1px solid var(--border-default);
+        .cl-sections {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
         }
-        .cl-status-section:last-child { border-bottom: none; }
-
-        /* === SECTION HEADER === */
+        .cl-status-section {
+          background: rgba(255,255,255,0.015);
+          border: 1px solid rgba(255,255,255,0.06);
+          border-radius: 12px;
+          overflow: hidden;
+        }
         .cl-section-header {
           display: flex;
           align-items: center;
           gap: 8px;
-          padding: 7px 12px 7px 8px;
-          background: var(--bg-elevated);
-          border-bottom: 1px solid var(--border-default);
+          padding: 10px 14px;
+          background: rgba(255,255,255,0.03);
+          border-bottom: 1px solid rgba(255,255,255,0.05);
           user-select: none;
         }
         .cl-section-toggle {
-          display: flex;
-          align-items: center;
-          justify-content: center;
           background: none;
           border: none;
           padding: 2px;
+          color: var(--color-text-muted);
           cursor: pointer;
           border-radius: 4px;
-          color: var(--text-muted);
-          transition: background 0.12s, color 0.12s;
+          display: flex;
+          align-items: center;
+          transition: color 0.15s;
         }
         .cl-section-toggle:hover {
-          background: var(--bg-elevated);
-          color: var(--text-primary);
+          color: var(--color-text-primary);
         }
-        .cl-section-chevron { flex-shrink: 0; }
-
+        .cl-section-chevron {
+          display: block;
+        }
         .cl-section-pill {
           display: inline-flex;
           align-items: center;
           gap: 5px;
-          padding: 2px 9px 2px 6px;
-          border-radius: 20px;
-          border: 1px solid transparent;
-          font-size: 11px;
+          padding: 2px 8px;
+          border-radius: 6px;
+          font-size: 10px;
           font-weight: 700;
-          letter-spacing: 0.06em;
-          line-height: 1;
+          letter-spacing: 0.05em;
+          border: 1px solid transparent;
         }
         .cl-section-pill-dot {
-          width: 6px;
-          height: 6px;
+          width: 5px;
+          height: 5px;
           border-radius: 50%;
-          flex-shrink: 0;
         }
         .cl-section-count {
-          font-size: 11.5px;
+          font-size: 11px;
           font-weight: 600;
           color: var(--color-text-muted);
           margin-left: 2px;
         }
 
-        /* === COLUMN HEADER ROW === */
+        /* === COLUMN HEADERS === */
         .cl-col-header-row {
           display: grid;
-          grid-template-columns: 1fr 120px 110px 110px 40px;
-          align-items: center;
-          padding: 4px 12px 4px 34px;
-          border-bottom: 1px solid var(--border-default);
-          background: var(--bg-card);
+          grid-template-columns: 1fr 140px 110px 100px 40px;
+          gap: 8px;
+          padding: 6px 14px;
+          background: rgba(255,255,255,0.01);
+          border-bottom: 1px solid rgba(255,255,255,0.04);
         }
         .cl-col-header {
-          font-size: 10.5px;
+          font-size: 10px;
           font-weight: 700;
-          color: var(--text-muted);
           text-transform: uppercase;
-          letter-spacing: 0.05em;
-          padding: 2px 0;
+          letter-spacing: 0.06em;
+          color: var(--color-text-muted);
         }
 
         /* === TASK ROW === */
         .cl-task-row {
           display: grid;
-          grid-template-columns: 1fr 120px 110px 110px 40px;
+          grid-template-columns: 1fr 140px 110px 100px 40px;
+          gap: 8px;
           align-items: center;
-          padding: 0 12px 0 10px;
-          min-height: 34px;
-          border-bottom: 1px solid var(--border-subtle);
-          background: transparent;
-          transition: background 0.1s;
-          position: relative;
+          padding: 7px 14px;
+          border-bottom: 1px solid rgba(255,255,255,0.03);
+          transition: background 0.12s;
         }
-        .cl-task-row:last-of-type { border-bottom: none; }
-        .cl-task-row:hover { background: var(--bg-elevated); }
-        .cl-task-row--blocked { border-left: 2px solid #EF4444; padding-left: 8px; }
-        .cl-task-row--overdue  { border-left: 2px solid var(--color-brand-pink); padding-left: 8px; }
+        .cl-task-row:last-child {
+          border-bottom: none;
+        }
+        .cl-task-row:hover {
+          background: rgba(255,255,255,0.035);
+        }
+        .cl-task-row--blocked {
+          background: rgba(239, 68, 68, 0.03);
+        }
+        .cl-task-row--overdue {
+          background: rgba(245, 158, 11, 0.03);
+        }
 
-        /* === TASK COLUMNS === */
+        /* Column contents */
         .cl-task-col {
           display: flex;
           align-items: center;
-          padding: 5px 6px;
-          overflow: hidden;
-        }
-        .cl-task-col--name {
-          gap: 7px;
-          flex: 1;
           min-width: 0;
         }
-        .cl-task-col--assignees { justify-content: flex-start; }
-        .cl-task-col--due       { justify-content: flex-start; }
-        .cl-task-col--priority  { justify-content: flex-start; }
-        .cl-task-col--actions   { justify-content: flex-end; }
-
-        /* === STATUS DOT BUTTON === */
+        .cl-task-col--name {
+          gap: 8px;
+          overflow: hidden;
+        }
         .cl-status-dot-btn {
-          display: flex;
-          align-items: center;
-          justify-content: center;
           background: none;
           border: none;
           padding: 2px;
           cursor: pointer;
-          border-radius: 50%;
+          display: flex;
+          align-items: center;
           flex-shrink: 0;
-          transition: opacity 0.12s;
         }
-        .cl-status-dot-btn:hover { opacity: 0.7; }
         .cl-status-dot {
-          width: 11px;
-          height: 11px;
+          width: 9px;
+          height: 9px;
           border-radius: 50%;
           display: block;
-          flex-shrink: 0;
-          border: 1.5px solid var(--border-strong);
+          transition: transform 0.15s;
         }
-
-        /* === TASK NAME === */
+        .cl-status-dot-btn:hover .cl-status-dot {
+          transform: scale(1.3);
+        }
         .cl-task-name {
           font-size: 13px;
           font-weight: 500;
-          color: var(--text-primary);
-          white-space: nowrap;
+          color: var(--color-text-primary);
           overflow: hidden;
           text-overflow: ellipsis;
+          white-space: nowrap;
           cursor: pointer;
-          flex: 1;
-          min-width: 0;
-          transition: color 0.12s;
         }
-        .cl-task-name:hover { color: var(--color-brand-pink); }
-        .cl-task-name--editable:hover {
-          text-decoration: underline dotted var(--border-strong);
+        .cl-task-name--editable {
+          cursor: text;
         }
-
-        /* === INLINE NAME EDIT INPUT === */
+        .cl-task-name:hover {
+          color: #FF3396;
+        }
         .cl-task-name-edit {
           flex: 1;
-          min-width: 0;
           height: 24px;
-          padding: 0 6px;
-          font-size: 13px;
-          font-weight: 500;
-          color: var(--text-primary);
-          background: var(--bg-elevated);
-          border: 1.5px solid var(--color-brand-pink);
+          background: rgba(255,255,255,0.08);
+          border: 1px solid #FF3396;
           border-radius: 4px;
+          padding: 0 6px;
+          color: var(--color-text-primary);
+          font-size: 13px;
           outline: none;
-          caret-color: var(--color-brand-pink);
         }
-
-        /* === TAGS === */
         .cl-tag-row {
           display: flex;
-          flex-wrap: nowrap;
-          gap: 3px;
+          align-items: center;
+          gap: 4px;
           flex-shrink: 0;
         }
         .cl-tag {
-          font-size: 10px;
+          font-size: 9px;
           font-weight: 600;
           padding: 1px 5px;
           border-radius: 4px;
-          border: 1px solid transparent;
+          border: 1px solid;
           white-space: nowrap;
         }
 
-        /* === AVATAR STACK === */
+        /* Assignees */
+        .cl-task-col--assignees {
+          gap: 4px;
+        }
         .cl-avatar-stack {
           display: flex;
           align-items: center;
         }
         .cl-avatar-wrap {
-          margin-right: -5px;
-          position: relative;
+          margin-left: -4px;
         }
-        .cl-avatar-wrap:last-child { margin-right: 0; }
+        .cl-avatar-wrap:first-child {
+          margin-left: 0;
+        }
         .cl-avatar-overflow {
           width: 22px;
           height: 22px;
           border-radius: 50%;
-          background: var(--color-surface-3);
-          color: var(--color-text-secondary);
+          background: rgba(255,255,255,0.1);
+          color: var(--color-text-muted);
           font-size: 9px;
           font-weight: 700;
           display: flex;
           align-items: center;
           justify-content: center;
-          border: 1px solid var(--border-default);
-          flex-shrink: 0;
-          margin-left: 3px;
+          margin-left: -4px;
+          border: 1px solid rgba(255,255,255,0.1);
         }
-        .cl-unassigned-icon { color: var(--text-muted); flex-shrink: 0; }
+        .cl-unassigned-icon {
+          color: rgba(255,255,255,0.15);
+        }
 
-        /* === DUE DATE === */
+        /* Due date */
+        .cl-task-col--due {
+          font-size: 11px;
+          color: var(--color-text-secondary);
+        }
         .cl-due-date {
           display: inline-flex;
           align-items: center;
           gap: 4px;
-          font-size: 12px;
-          font-weight: 600;
-          color: var(--text-secondary);
-          white-space: nowrap;
+          font-size: 11px;
+          color: var(--color-text-secondary);
         }
-        .cl-due-date--overdue { color: #DC2626; }
+        .cl-due-date--overdue {
+          color: #EF4444;
+          font-weight: 600;
+        }
 
-        /* === PRIORITY CHIP === */
+        /* Priority */
+        .cl-task-col--priority {
+          font-size: 11px;
+        }
         .cl-priority-chip {
           display: inline-flex;
           align-items: center;
           gap: 4px;
-          font-size: 11.5px;
-          font-weight: 700;
-          padding: 2px 7px 2px 5px;
+          padding: 2px 7px;
           border-radius: 5px;
-          white-space: nowrap;
+          font-size: 10px;
+          font-weight: 700;
+          letter-spacing: 0.02em;
         }
 
-        /* === STATUS DROPDOWN MENU === */
-        .cl-status-menu {
-          background: var(--bg-card) !important;
-          border: 1px solid var(--border-default) !important;
-          border-radius: 10px !important;
-          padding: 4px !important;
-          min-width: 160px;
-          box-shadow: 0 12px 32px rgba(0,0,0,0.25) !important;
+        /* Actions */
+        .cl-task-col--actions {
+          justify-content: flex-end;
         }
-        .cl-status-menu-item {
-          display: flex !important;
-          align-items: center !important;
-          gap: 7px !important;
-          padding: 6px 10px !important;
-          font-size: 12.5px !important;
-          font-weight: 500 !important;
-          color: var(--text-primary) !important;
-          border-radius: 6px !important;
-          cursor: pointer !important;
-        }
-        .cl-status-menu-item:hover { background: var(--bg-elevated) !important; }
-        .cl-status-menu-item--danger { color: #DC2626 !important; }
-        .cl-status-menu-item--danger:hover { background: rgba(239,68,68,0.1) !important; }
-        .cl-status-menu-dot {
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
-          flex-shrink: 0;
-        }
-
-        /* === ROW ACTION BUTTON === */
         .cl-row-action-btn {
-          display: flex;
-          align-items: center;
-          justify-content: center;
           background: none;
           border: none;
           padding: 4px;
+          color: var(--color-text-muted);
           cursor: pointer;
-          border-radius: 6px;
-          color: var(--text-muted);
-          opacity: 0;
-          transition: opacity 0.12s, background 0.12s;
+          border-radius: 4px;
+          display: flex;
+          align-items: center;
+          transition: color 0.15s, background 0.15s;
         }
-        .cl-task-row:hover .cl-row-action-btn { opacity: 1; }
         .cl-row-action-btn:hover {
-          background: var(--bg-elevated);
-          color: var(--text-primary);
-        }
-
-        /* === EMPTY SECTION === */
-        .cl-empty-section {
-          padding: 8px 34px;
-          font-size: 12px;
-          color: var(--text-muted);
-          font-style: italic;
+          color: var(--color-text-primary);
+          background: rgba(255,255,255,0.06);
         }
 
         /* === ADD TASK ROW === */
@@ -1040,81 +1106,118 @@ export function ListView({
           display: flex;
           align-items: center;
           gap: 6px;
-          padding: 6px 12px 6px 34px;
+          width: 100%;
+          padding: 8px 14px;
           background: none;
           border: none;
-          width: 100%;
-          text-align: left;
-          font-size: 12.5px;
-          font-weight: 600;
-          color: var(--text-muted);
+          border-top: 1px solid rgba(255,255,255,0.03);
+          color: var(--color-text-muted);
+          font-size: 12px;
+          font-weight: 500;
           cursor: pointer;
-          transition: color 0.12s, background 0.12s;
-          border-top: 1px solid var(--border-subtle);
+          transition: color 0.15s, background 0.15s;
         }
         .cl-add-row:hover {
-          color: var(--color-brand-pink);
-          background: rgba(255, 51, 150, 0.04);
+          color: #FF3396;
+          background: rgba(255,255,255,0.02);
         }
-        .cl-add-row-icon { flex-shrink: 0; }
-
+        .cl-add-row-icon {
+          color: inherit;
+        }
         .cl-add-row-form {
           display: flex;
           align-items: center;
-          gap: 8px;
-          padding: 6px 12px 6px 10px;
-          border-top: 1px solid var(--border-subtle);
-          background: var(--bg-elevated);
+          padding: 6px 14px;
+          border-top: 1px solid rgba(255,255,255,0.04);
+          background: rgba(255,255,255,0.02);
         }
         .cl-add-row-input {
-          flex: 1;
           height: 28px;
-          padding: 0 10px;
-          background: var(--bg-card);
-          border: 1px solid var(--border-default);
+          background: rgba(255,255,255,0.06);
+          border: 1px solid rgba(255,255,255,0.1);
           border-radius: 6px;
-          color: var(--text-primary);
-          font-size: 12.5px;
+          padding: 0 8px;
+          color: var(--color-text-primary);
+          font-size: 12px;
           outline: none;
-          transition: border-color 0.15s;
         }
-        .cl-add-row-input:focus { border-color: var(--color-brand-pink); }
-        .cl-add-row-input::placeholder { color: var(--text-muted); }
+        .cl-add-row-input:focus {
+          border-color: #FF3396;
+        }
         .cl-add-row-save {
           height: 28px;
-          padding: 0 12px;
-          background: var(--color-brand-pink);
+          padding: 0 10px;
+          background: #FF3396;
           color: #fff;
           border: none;
           border-radius: 6px;
-          font-size: 12px;
+          font-size: 11px;
           font-weight: 700;
           cursor: pointer;
-          white-space: nowrap;
-          transition: opacity 0.12s;
         }
-        .cl-add-row-save:hover { opacity: 0.88; }
         .cl-add-row-cancel {
           height: 28px;
-          padding: 0 10px;
+          padding: 0 8px;
           background: none;
-          border: 1px solid var(--border-default);
+          border: 1px solid rgba(255,255,255,0.1);
+          color: var(--color-text-muted);
           border-radius: 6px;
-          color: var(--text-secondary);
-          font-size: 12px;
-          font-weight: 600;
+          font-size: 11px;
           cursor: pointer;
-          white-space: nowrap;
-          transition: background 0.12s;
         }
-        .cl-add-row-cancel:hover { background: var(--bg-elevated); }
+        .cl-empty-section {
+          padding: 12px 14px;
+          font-size: 12px;
+          color: var(--color-text-muted);
+          font-style: italic;
+        }
 
-        /* === EMPTY STATE === */
-        .cl-empty-state {
-          padding: 48px;
-          text-align: center;
-          font-size: 13px;
-          color: var(--text-muted);
+        /* === STATUS MENU === */
+        .cl-status-menu {
+          background: #0f172a;
+          border: 1px solid rgba(255,255,255,0.1);
+          border-radius: 8px;
+          padding: 4px;
+          min-width: 140px;
+          z-index: 50;
+        }
+        .cl-status-menu-item {
+          display: flex;
+          align-items: center;
+          gap: 7px;
+          padding: 6px 8px;
+          font-size: 12px;
+          color: #e2e8f0;
+          border-radius: 5px;
+          cursor: pointer;
+        }
+        .cl-status-menu-item:hover {
+          background: rgba(255,255,255,0.08);
+        }
+        .cl-status-menu-item--danger {
+          color: #ef4444;
+        }
+        .cl-status-menu-item--danger:hover {
+          background: rgba(239,68,68,0.12);
+        }
+        .cl-status-menu-dot {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          flex-shrink: 0;
+        }
+
+        @media (max-width: 768px) {
+          .cl-col-header-row,
+          .cl-task-row {
+            grid-template-columns: 1fr 90px 40px;
+          }
+          .cl-col--due,
+          .cl-col--priority,
+          .cl-task-col--due,
+          .cl-task-col--priority {
+            display: none;
+          }
         }
       `}</style>
     </div>

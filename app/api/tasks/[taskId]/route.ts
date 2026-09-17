@@ -1,36 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySession } from '@/shared/utils/session';
-import { supabaseAdmin } from '@/shared/utils/supabaseAdmin';
-
-const TASK_SELECT = `
-  *,
-  status:statuses(*),
-  list:lists(id, name, space:spaces(id, name)),
-  assignees:task_assignees(
-    assigned_at,
-    assigned_by,
-    profile:profiles!task_assignees_user_id_fkey(id, full_name, email, avatar_url)
-  ),
-  tags:task_tag_links(tag:task_tags(id, name, color)),
-  subtasks:tasks!parent_task_id(
-    id, name, priority, due_date,
-    status:statuses(name, type, color),
-    assignees:task_assignees(profile:profiles!task_assignees_user_id_fkey(id, full_name, avatar_url))
-  ),
-  comments(
-    id, content, mentions, edited_at, created_at,
-    author:profiles(id, full_name, avatar_url)
-  ),
-  blocking:task_dependencies!task_id(
-    id, type,
-    depends_on:tasks!depends_on_task_id(id, name, status:statuses(name, type))
-  ),
-  dependencies:task_dependencies!depends_on_task_id(
-    id, type,
-    task:tasks!task_id(id, name, status:statuses(name, type))
-  )
-`;
+import { getDb } from '@/shared/utils/mongoClient';
 
 // GET /api/tasks/[taskId]
 export async function GET(
@@ -46,53 +17,19 @@ export async function GET(
     const session = await verifySession(token);
     if (!session) return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
 
-    const supabaseUrl = process.env.SUPABASE_URL || '';
-    const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-
-    const headers = {
-      'apikey': serviceRole,
-      'Authorization': `Bearer ${serviceRole}`,
-      'Accept': 'application/vnd.pgrst.object+json'
-    };
-
-    const res = await fetch(`${supabaseUrl}/rest/v1/tasks?id=eq.${taskId}&select=${encodeURIComponent(TASK_SELECT.replace(/\s+/g, ''))}`, {
-      headers: { ...headers, 'Accept': 'application/json' },
-      cache: 'no-store'
+    const db = await getDb();
+    const task = await db.collection('tasks').findOne({
+      $or: [{ id: taskId }, { clickup_id: taskId }]
     });
-
-    if (!res.ok) {
-      if (res.status === 406 || res.status === 404) {
-        return NextResponse.json({ error: 'Task not found' }, { status: 404 });
-      }
-      throw new Error(`Supabase query failed: ${res.status} ${await res.text()}`);
-    }
-
-    const rawResult = await res.json();
-    // Supabase REST returns an array when no Accept: object header is set
-    const task = Array.isArray(rawResult) ? rawResult[0] : rawResult;
 
     if (!task) {
       return NextResponse.json({ error: 'Task not found' }, { status: 404 });
     }
 
-    // Staff: verify they are an assignee — use both profile ID and email fallback
+    // Staff: verify they are assigned
     if (session.role === 'staff') {
-      const profileRes = await fetch(
-        `${supabaseUrl}/rest/v1/profiles?email=eq.${encodeURIComponent(session.email)}&select=id`,
-        { headers, cache: 'no-store' }
-      );
-
-      let staffProfileId: string | null = null;
-      if (profileRes.ok) {
-        const profiles = await profileRes.json();
-        staffProfileId = profiles[0]?.id ?? null;
-      }
-
-      const isAssigned = task.assignees?.some((a: any) => {
-        // Match by profile ID (primary) or by email fallback
-        if (staffProfileId && a.profile?.id === staffProfileId) return true;
-        if (a.profile?.email && a.profile.email.toLowerCase() === session.email.toLowerCase()) return true;
-        return false;
+      const isAssigned = (task.assignees || []).some((a: any) => {
+        return a.profile?.email && a.profile.email.toLowerCase() === session.email.toLowerCase();
       });
 
       if (!isAssigned) {
@@ -100,7 +37,17 @@ export async function GET(
       }
     }
 
-    return NextResponse.json(task);
+    // Subtasks & Comments
+    const [subtasks, comments] = await Promise.all([
+      db.collection('tasks').find({ parent_task_id: task.id }).toArray(),
+      db.collection('comments').find({ task_id: task.id }).sort({ created_at: -1 }).toArray()
+    ]);
+
+    return NextResponse.json({
+      ...task,
+      subtasks: subtasks || [],
+      comments: comments || []
+    });
   } catch (err: any) {
     console.error('Error in GET /api/tasks/[taskId]:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });
@@ -121,83 +68,121 @@ export async function PATCH(
     const session = await verifySession(token);
     if (!session) return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
 
-    const { data: actor } = await supabaseAdmin
-      .from('profiles').select('id').eq('email', session.email).maybeSingle();
+    const db = await getDb();
+    const actor = await db.collection('users').findOne({
+      email: { $regex: new RegExp(`^${session.email.trim()}$`, 'i') }
+    });
 
-    const body = await request.json();
+    const task = await db.collection('tasks').findOne({
+      $or: [{ id: taskId }, { clickup_id: taskId }]
+    });
+
+    if (!task) {
+      return NextResponse.json({ error: 'Task not found' }, { status: 404 });
+    }
+
+    const body = await request.json() as any;
 
     // Staff can only update status_id on their own tasks
     if (session.role === 'staff') {
-      const isAssigned = await supabaseAdmin
-        .from('task_assignees')
-        .select('task_id')
-        .eq('task_id', taskId)
-        .eq('user_id', actor?.id)
-        .maybeSingle();
-      if (!isAssigned.data) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      const isAssigned = (task.assignees || []).some((a: any) => {
+        return a.profile?.email && a.profile.email.toLowerCase() === session.email.toLowerCase();
+      });
+      if (!isAssigned) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-      const allowedFields = ['status_id'];
-      const filteredBody: Record<string, any> = {};
-      for (const key of allowedFields) {
-        if (key in body) filteredBody[key] = body[key];
-      }
-      if (Object.keys(filteredBody).length === 0) {
+      if (!body.status_id) {
         return NextResponse.json({ error: 'No permitted fields to update' }, { status: 400 });
       }
 
-      const { data, error } = await supabaseAdmin
-        .from('tasks').update({ ...filteredBody, updated_at: new Date().toISOString() })
-        .eq('id', taskId).select().single();
-      if (error) throw error;
+      let newStatus = await db.collection('statuses').findOne({ id: body.status_id });
+      if (!newStatus && task.list_id) {
+        const listDoc = await db.collection('lists').findOne({ id: task.list_id });
+        newStatus = listDoc?.statuses?.find((s: any) => s.id === body.status_id) || null;
+      }
 
-      // Write task_history entry
-      await supabaseAdmin.from('task_history').insert({
-        task_id: taskId, changed_by: actor?.id, field: 'status_id',
-        old_value: null, new_value: body.status_id,
-      });
+      const updateFields: any = {
+        status_id: body.status_id,
+        status: newStatus,
+        updated_at: new Date().toISOString()
+      };
 
-      return NextResponse.json(data);
+      if (newStatus?.type === 'closed') {
+        updateFields.date_closed = new Date().toISOString();
+      } else {
+        updateFields.date_closed = null;
+      }
+
+      const updated = await db.collection('tasks').findOneAndUpdate(
+        { id: task.id },
+        { $set: updateFields },
+        { returnDocument: 'after' }
+      );
+
+      return NextResponse.json(updated);
     }
 
     // PM: full update
-    const { assignee_ids, tag_ids, ...taskFields } = body;
+    const { assignee_ids, tag_ids, status_id, ...taskFields } = body;
+    const updateFields: any = {
+      ...taskFields,
+      updated_at: new Date().toISOString()
+    };
 
-    const { data, error } = await supabaseAdmin
-      .from('tasks')
-      .update({ ...taskFields, updated_at: new Date().toISOString() })
-      .eq('id', taskId).select().single();
-    if (error) throw error;
+    if (status_id) {
+      updateFields.status_id = status_id;
+      let newStatus = await db.collection('statuses').findOne({ id: status_id });
+      if (!newStatus && (taskFields.list_id || task.list_id)) {
+        const listDoc = await db.collection('lists').findOne({ id: taskFields.list_id || task.list_id });
+        newStatus = listDoc?.statuses?.find((s: any) => s.id === status_id) || null;
+      }
+      updateFields.status = newStatus;
+      if (newStatus?.type === 'closed') {
+        updateFields.date_closed = new Date().toISOString();
+      }
+    }
 
-    // Update assignees if provided
+    // Update assignees
     if (Array.isArray(assignee_ids)) {
-      await supabaseAdmin.from('task_assignees').delete().eq('task_id', taskId);
       if (assignee_ids.length > 0) {
-        await supabaseAdmin.from('task_assignees').insert(
-          assignee_ids.map((uid: string) => ({
-            task_id: taskId, user_id: uid, assigned_by: actor?.id,
-          }))
-        );
-        // Notify new assignees
-        await supabaseAdmin.from('notifications').insert(
-          assignee_ids.map((uid: string) => ({
-            user_id: uid, type: 'assigned', task_id: taskId,
-            actor_id: actor?.id, message: `You were assigned to a task`, is_read: false,
-          }))
-        );
+        const assignedUsers = await db.collection('users')
+          .find({ id: { $in: assignee_ids } })
+          .toArray();
+
+        updateFields.assignees = assignedUsers.map(u => ({
+          assigned_at: new Date().toISOString(),
+          assigned_by: actor?.id || null,
+          profile: {
+            id: u.id,
+            full_name: u.full_name || u.fullName,
+            email: u.email,
+            avatar_url: u.avatar_url || u.avatarUrl || null,
+            role: u.role
+          }
+        }));
+      } else {
+        updateFields.assignees = [];
       }
     }
 
-    // Update tags if provided
+    // Update tags
     if (Array.isArray(tag_ids)) {
-      await supabaseAdmin.from('task_tag_links').delete().eq('task_id', taskId);
       if (tag_ids.length > 0) {
-        await supabaseAdmin.from('task_tag_links').insert(
-          tag_ids.map((tid: string) => ({ task_id: taskId, tag_id: tid }))
-        );
+        const matchedTags = await db.collection('tags')
+          .find({ id: { $in: tag_ids } })
+          .toArray();
+        updateFields.tags = matchedTags.map(t => ({ tag: { id: t.id, name: t.name, color: t.color } }));
+      } else {
+        updateFields.tags = [];
       }
     }
 
-    return NextResponse.json(data);
+    const updated = await db.collection('tasks').findOneAndUpdate(
+      { id: task.id },
+      { $set: updateFields },
+      { returnDocument: 'after' }
+    );
+
+    return NextResponse.json(updated);
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
@@ -219,16 +204,19 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Cascade: delete subtasks, task_assignees, tags, comments, history, dependencies, notifications
-    await supabaseAdmin.from('tasks').delete().eq('parent_task_id', taskId);
-    await supabaseAdmin.from('task_assignees').delete().eq('task_id', taskId);
-    await supabaseAdmin.from('task_tag_links').delete().eq('task_id', taskId);
-    await supabaseAdmin.from('comments').delete().eq('task_id', taskId);
-    await supabaseAdmin.from('task_history').delete().eq('task_id', taskId);
-    await supabaseAdmin.from('task_dependencies').delete().eq('task_id', taskId);
-    await supabaseAdmin.from('task_dependencies').delete().eq('depends_on_task_id', taskId);
-    await supabaseAdmin.from('notifications').delete().eq('task_id', taskId);
-    await supabaseAdmin.from('tasks').delete().eq('id', taskId);
+    const db = await getDb();
+    const task = await db.collection('tasks').findOne({
+      $or: [{ id: taskId }, { clickup_id: taskId }]
+    });
+
+    if (task) {
+      const realId = task.id;
+      await Promise.all([
+        db.collection('tasks').deleteMany({ $or: [{ id: realId }, { parent_task_id: realId }] }),
+        db.collection('comments').deleteMany({ task_id: realId }),
+        db.collection('notifications').deleteMany({ task_id: realId })
+      ]);
+    }
 
     return NextResponse.json({ success: true });
   } catch (err: any) {

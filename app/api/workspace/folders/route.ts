@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySession } from '@/shared/utils/session';
-import { supabaseAdmin } from '@/shared/utils/supabaseAdmin';
+import { getDb } from '@/shared/utils/mongoClient';
+import { randomUUID } from 'crypto';
 
 // GET /api/workspace/folders?space_id=...
 export async function GET(request: Request) {
@@ -15,12 +16,21 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const spaceId = searchParams.get('space_id');
 
-    let query = supabaseAdmin.from('folders').select('*, lists(*)').order('position', { ascending: true });
-    if (spaceId) query = query.eq('space_id', spaceId);
+    const db = await getDb();
+    const query: any = {};
+    if (spaceId) query.space_id = spaceId;
 
-    const { data, error } = await query;
-    if (error) throw error;
-    return NextResponse.json(data || []);
+    const [folders, lists] = await Promise.all([
+      db.collection('folders').find(query).sort({ position: 1 }).toArray(),
+      db.collection('lists').find({}).sort({ position: 1 }).toArray()
+    ]);
+
+    const enriched = folders.map(f => ({
+      ...f,
+      lists: lists.filter(l => l.folder_id === f.id)
+    }));
+
+    return NextResponse.json(enriched);
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
@@ -37,28 +47,38 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { data: creator } = await supabaseAdmin
-      .from('profiles').select('id').eq('email', session.email).maybeSingle();
+    const db = await getDb();
+    const creator = await db.collection('users').findOne({
+      email: { $regex: new RegExp(`^${session.email.trim()}$`, 'i') }
+    });
 
-    const body = await request.json();
+    const body = await request.json() as any;
     const { space_id, name, color } = body;
     if (!space_id || !name) {
       return NextResponse.json({ error: 'space_id and name are required' }, { status: 400 });
     }
 
-    const { data: lastFolder } = await supabaseAdmin
-      .from('folders').select('position').eq('space_id', space_id)
-      .order('position', { ascending: false }).limit(1).maybeSingle();
+    const lastFolder = await db.collection('folders')
+      .find({ space_id })
+      .sort({ position: -1 })
+      .limit(1)
+      .next();
+
     const position = (lastFolder?.position ?? -1) + 1;
+    const folderId = randomUUID();
 
-    const { data, error } = await supabaseAdmin
-      .from('folders')
-      .insert({ space_id, name, color: color || null, position, created_by: creator?.id })
-      .select()
-      .single();
+    const newFolder = {
+      id: folderId,
+      space_id,
+      name,
+      color: color || null,
+      position,
+      created_by: creator?.id || null,
+      created_at: new Date().toISOString()
+    };
 
-    if (error) throw error;
-    return NextResponse.json(data, { status: 201 });
+    await db.collection('folders').insertOne(newFolder);
+    return NextResponse.json(newFolder, { status: 201 });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

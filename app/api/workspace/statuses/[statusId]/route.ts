@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySession } from '@/shared/utils/session';
-import { supabaseAdmin } from '@/shared/utils/supabaseAdmin';
+import { getDb } from '@/shared/utils/mongoClient';
 
 // PATCH /api/workspace/statuses/[statusId]
 export async function PATCH(
@@ -18,7 +18,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const body = await request.json();
+    const body = await request.json() as any;
     const { name, color, type, position } = body;
 
     const update: any = {};
@@ -27,15 +27,34 @@ export async function PATCH(
     if (type !== undefined) update.type = type;
     if (position !== undefined) update.position = position;
 
-    const { data, error } = await supabaseAdmin
-      .from('statuses')
-      .update(update)
-      .eq('id', statusId)
-      .select()
-      .single();
+    const db = await getDb();
+    const updated = await db.collection('statuses').findOneAndUpdate(
+      { id: statusId },
+      { $set: update },
+      { returnDocument: 'after' }
+    );
 
-    if (error) throw error;
-    return NextResponse.json(data);
+    if (updated) {
+      // Also update embedded status inside list
+      const listUpdate: any = {};
+      if (name !== undefined) listUpdate['statuses.$.name'] = name;
+      if (color !== undefined) listUpdate['statuses.$.color'] = color;
+      if (type !== undefined) listUpdate['statuses.$.type'] = type;
+      if (position !== undefined) listUpdate['statuses.$.position'] = position;
+
+      await db.collection('lists').updateOne(
+        { 'statuses.id': statusId },
+        { $set: listUpdate }
+      );
+
+      // Also update status object on tasks
+      await db.collection('tasks').updateMany(
+        { status_id: statusId },
+        { $set: { status: updated } }
+      );
+    }
+
+    return NextResponse.json(updated);
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
@@ -56,22 +75,24 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Check if any tasks are currently in this status
-    const { count, error: countErr } = await supabaseAdmin
-      .from('tasks')
-      .select('id', { count: 'exact', head: true })
-      .eq('status_id', statusId);
+    const db = await getDb();
 
-    if (countErr) throw countErr;
-    if (count && count > 0) {
+    // Check if any tasks are currently in this status
+    const taskCount = await db.collection('tasks').countDocuments({ status_id: statusId });
+    if (taskCount > 0) {
       return NextResponse.json(
         { error: 'Cannot delete status: Move all tasks out of this status first.' },
         { status: 400 }
       );
     }
 
-    const { error } = await supabaseAdmin.from('statuses').delete().eq('id', statusId);
-    if (error) throw error;
+    await Promise.all([
+      db.collection('statuses').deleteOne({ id: statusId }),
+      db.collection('lists').updateOne(
+        { 'statuses.id': statusId },
+        { $pull: { statuses: { id: statusId } } as any }
+      )
+    ]);
 
     return NextResponse.json({ success: true });
   } catch (err: any) {

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySession } from '@/shared/utils/session';
-import { supabaseAdmin } from '@/shared/utils/supabaseAdmin';
+import { getDb } from '@/shared/utils/mongoClient';
 
 // GET /api/notifications — get current user's notifications
 export async function GET() {
@@ -12,23 +12,19 @@ export async function GET() {
     const session = await verifySession(token);
     if (!session) return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
 
-    const { data: profile } = await supabaseAdmin
-      .from('profiles').select('id').eq('email', session.email).maybeSingle();
+    const db = await getDb();
+    const profile = await db.collection('users').findOne({
+      email: { $regex: new RegExp(`^${session.email.trim()}$`, 'i') }
+    });
     if (!profile) return NextResponse.json([]);
 
-    const { data, error } = await supabaseAdmin
-      .from('notifications')
-      .select(`
-        id, type, message, is_read, created_at,
-        task:tasks(id, name),
-        actor:profiles!actor_id(id, full_name, avatar_url)
-      `)
-      .eq('user_id', profile.id)
-      .order('created_at', { ascending: false })
-      .limit(20);
+    const notifications = await db.collection('notifications')
+      .find({ user_id: profile.id })
+      .sort({ created_at: -1 })
+      .limit(20)
+      .toArray();
 
-    if (error) throw error;
-    return NextResponse.json(data || []);
+    return NextResponse.json(notifications);
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
@@ -43,15 +39,17 @@ export async function POST(request: Request) {
     const session = await verifySession(token);
     if (!session) return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
 
-    const { data: profile } = await supabaseAdmin
-      .from('profiles').select('id').eq('email', session.email).maybeSingle();
+    const db = await getDb();
+    const profile = await db.collection('users').findOne({
+      email: { $regex: new RegExp(`^${session.email.trim()}$`, 'i') }
+    });
 
-    const body = await request.json();
-    if (body.markAllRead) {
-      await supabaseAdmin.from('notifications')
-        .update({ is_read: true })
-        .eq('user_id', profile?.id)
-        .eq('is_read', false);
+    const body = await request.json() as any;
+    if (body.markAllRead && profile) {
+      await db.collection('notifications').updateMany(
+        { user_id: profile.id, is_read: false },
+        { $set: { is_read: true } }
+      );
     }
 
     return NextResponse.json({ success: true });

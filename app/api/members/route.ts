@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySession } from '@/shared/utils/session';
-import { supabaseAdmin } from '@/shared/utils/supabaseAdmin';
+import { getDb } from '@/shared/utils/mongoClient';
 import { randomUUID } from 'crypto';
 
 // GET /api/members
@@ -15,13 +15,14 @@ export async function GET() {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { data, error } = await supabaseAdmin
-      .from('profiles')
-      .select('id, email, full_name, avatar_url, role, status, created_at')
-      .order('created_at', { ascending: true });
+    const db = await getDb();
+    const members = await db.collection('users')
+      .find({})
+      .project({ id: 1, email: 1, full_name: 1, avatar_url: 1, role: 1, status: 1, created_at: 1 })
+      .sort({ created_at: 1 })
+      .toArray();
 
-    if (error) throw error;
-    return NextResponse.json(data || []);
+    return NextResponse.json(members);
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
@@ -38,7 +39,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const body = await request.json();
+    const body = await request.json() as any;
     const { email, full_name, role } = body;
 
     if (!email || !role) {
@@ -48,23 +49,30 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
     }
 
-    // Check if profile already exists
-    const { data: existing } = await supabaseAdmin
-      .from('profiles').select('id, status').eq('email', email.toLowerCase()).maybeSingle();
+    const normalizedEmail = email.toLowerCase().trim();
+    const db = await getDb();
+
+    // Check if user already exists
+    const existing = await db.collection('users').findOne({
+      email: { $regex: new RegExp(`^${normalizedEmail}$`, 'i') }
+    });
 
     if (existing) {
       if (existing.status !== 'deactivated') {
         return NextResponse.json({ error: 'A member with this email already exists' }, { status: 409 });
       }
       // Reactivate deactivated member
-      await supabaseAdmin.from('profiles').update({ status: 'pending', role }).eq('email', email.toLowerCase());
+      await db.collection('users').updateOne(
+        { id: existing.id },
+        { $set: { status: 'pending', role, updated_at: new Date().toISOString() } }
+      );
     } else {
-      // Create new pending profile with generated UUID
+      // Create new pending profile
       const profileId = randomUUID();
-      const { error: insertErr } = await supabaseAdmin.from('profiles').insert({
+      await db.collection('users').insertOne({
         id: profileId,
-        email: email.toLowerCase(),
-        full_name: full_name || email.split('@')[0],
+        email: normalizedEmail,
+        full_name: full_name || normalizedEmail.split('@')[0],
         role,
         status: 'pending',
         timezone: 'UTC',
@@ -76,11 +84,9 @@ export async function POST(request: Request) {
           comment: true,
           status_changed: true,
         },
-      }, { count: 'exact' });
-      if (insertErr) {
-        console.error('Insert profile error:', insertErr);
-        throw insertErr;
-      }
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
     }
 
     // Send invite email via Resend (if configured)
@@ -96,25 +102,18 @@ export async function POST(request: Request) {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            from: process.env.RESEND_FROM || 'TM Labs <no-reply@tmlabs.xyz>',
-            to: [email],
+            from: process.env.RESEND_FROM || 'TM Labs <operations@tmlabs.xyz>',
+            to: [normalizedEmail],
             subject: "You've been invited to TM Labs PM Platform",
             html: `
               <div style="background:#0F1B35;color:#F0F4FF;font-family:sans-serif;padding:40px;max-width:600px;margin:0 auto;border-radius:12px;">
-                <img src="${appUrl}/brand/White.png" alt="TM Labs" style="height:40px;margin-bottom:24px;" />
                 <h1 style="color:#FF3396;font-size:24px;margin:0 0 16px;">You're invited to TM Labs!</h1>
                 <p style="color:#8A9CC8;margin:0 0 24px;">
                   You have been invited to join the TM Labs PM Platform as <strong style="color:#F0F4FF;">${role.replace('_', ' ')}</strong>.
                 </p>
-                <p style="color:#8A9CC8;margin:0 0 24px;">
-                  Please note: This invitation is valid for 48 hours. After 48 hours, the invitation will automatically expire and be cancelled.
-                </p>
                 <a href="${appUrl}/login?invited=true" style="display:inline-block;background:linear-gradient(135deg,#FF3396,#6633FF);color:white;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:15px;">
                   Accept Invitation & Sign In
                 </a>
-                <p style="color:#4A5A82;font-size:12px;margin-top:32px;">
-                  This invitation was sent from TM Labs. If you didn't expect this, you can ignore it.
-                </p>
               </div>
             `,
           }),
@@ -123,15 +122,10 @@ export async function POST(request: Request) {
         if (!emailRes.ok) {
           const emailErr = await emailRes.json();
           console.error('Resend API error:', emailErr);
-        } else {
-          const emailData = await emailRes.json();
-          console.log('Invite email sent successfully:', emailData);
         }
       } catch (emailErr) {
         console.error('Failed to send invite email:', emailErr);
       }
-    } else {
-      console.warn('Resend API key not configured. Invite email not sent.');
     }
 
     return NextResponse.json({ success: true }, { status: 201 });

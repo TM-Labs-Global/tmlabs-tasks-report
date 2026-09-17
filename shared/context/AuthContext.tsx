@@ -1,7 +1,6 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '@/shared/api/supabase';
 
 interface UserProfile {
   email: string;
@@ -12,7 +11,7 @@ interface AuthContextType {
   user: UserProfile | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, role: string, token: { access_token: string; refresh_token: string } | null) => Promise<void>;
+  login: (email: string, role: string, token?: any) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -21,16 +20,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  const syncSupabaseSession = async (token: { access_token: string; refresh_token: string } | null) => {
-    if (token && supabase) {
-      await supabase.auth.setSession({
-        access_token: token.access_token,
-        refresh_token: token.refresh_token,
-      });
-    }
-  };
-
 
   const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
 
@@ -55,40 +44,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (!storedLoginTime) {
               localStorage.setItem('tm_auth_login_time', Date.now().toString());
             }
-            await syncSupabaseSession(data.supabaseToken);
           } else {
             setUser(null);
+            localStorage.removeItem('tm_auth_login_time');
           }
         } else {
           setUser(null);
+          localStorage.removeItem('tm_auth_login_time');
         }
       } catch (err) {
-        console.error('Failed to restore authentication session:', err);
+        console.error('Session check failed:', err);
         setUser(null);
+        localStorage.removeItem('tm_auth_login_time');
       } finally {
         setIsLoading(false);
       }
     };
-    checkSession();
 
-    // Periodic 24-hour expiration checker (every minute)
-    const interval = setInterval(() => {
+    checkSession();
+  }, []);
+
+  // Periodic check to auto logout if 24 hours elapsed while user has page open
+  useEffect(() => {
+    const interval = setInterval(async () => {
       const storedLoginTime = localStorage.getItem('tm_auth_login_time');
       if (storedLoginTime) {
         const elapsed = Date.now() - parseInt(storedLoginTime, 10);
         if (elapsed > TWENTY_FOUR_HOURS_MS) {
-          logout();
+          console.warn('Periodic check: Session expired after 24 hours. Logging out...');
+          await logout();
         }
       }
-    }, 60 * 1000);
+    }, 60 * 1000); // check every minute
 
     return () => clearInterval(interval);
   }, []);
 
-  const login = async (email: string, role: string, token: { access_token: string; refresh_token: string } | null) => {
+  const login = async (email: string, role: string) => {
     localStorage.setItem('tm_auth_login_time', Date.now().toString());
     setUser({ email, role });
-    await syncSupabaseSession(token);
   };
 
   const logout = async () => {
@@ -96,9 +90,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem('tm_auth_login_time');
       sessionStorage.clear();
       await fetch('/api/auth/logout', { method: 'POST' });
-      if (supabase) {
-        await supabase.auth.signOut();
-      }
     } catch (err) {
       console.error('Failed to log out:', err);
     } finally {

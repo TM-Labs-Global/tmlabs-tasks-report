@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySession } from '@/shared/utils/session';
-import { supabaseAdmin } from '@/shared/utils/supabaseAdmin';
+import { getDb } from '@/shared/utils/mongoClient';
+import { randomUUID } from 'crypto';
 
 // GET /api/tasks?list_id=...&my_tasks=true
 export async function GET(request: Request) {
@@ -17,44 +18,27 @@ export async function GET(request: Request) {
     const listId = searchParams.get('list_id');
     const myTasks = searchParams.get('my_tasks') === 'true';
 
-    const { data: profile } = await supabaseAdmin
-      .from('profiles')
-      .select('id')
-      .eq('email', session.email)
-      .maybeSingle();
+    const db = await getDb();
+    const query: any = { is_archived: { $ne: true } };
 
-    let query = supabaseAdmin
-      .from('tasks')
-      .select(`
-        *,
-        status:statuses(*),
-        list:lists(id, name, space:spaces(id, name)),
-        assignees:task_assignees(
-          assigned_at,
-          assigned_by,
-          profile:profiles(id, full_name, email, avatar_url)
-        ),
-        tags:task_tag_links(tag:task_tags(id, name, color)),
-        subtasks:tasks!parent_task_id(id, name, status:statuses(name, type, color))
-      `)
-      .eq('is_archived', false)
-      .order('position', { ascending: true });
-
-    if (listId) query = query.eq('list_id', listId);
-    if (myTasks && profile?.id) {
-      const { data: assignedTaskIds } = await supabaseAdmin
-        .from('task_assignees')
-        .select('task_id')
-        .eq('user_id', profile.id);
-      const ids = (assignedTaskIds || []).map((r: any) => r.task_id);
-      if (ids.length === 0) return NextResponse.json([]);
-      query = query.in('id', ids);
+    if (listId) {
+      query.list_id = listId;
     }
 
-    const { data, error } = await query;
-    if (error) throw error;
+    if (myTasks) {
+      const user = await db.collection('users').findOne({
+        email: { $regex: new RegExp(`^${session.email.trim()}$`, 'i') }
+      });
+      if (!user) return NextResponse.json([]);
+      query['assignees.profile.id'] = user.id;
+    }
 
-    return NextResponse.json(data || []);
+    const tasks = await db.collection('tasks')
+      .find(query)
+      .sort({ position: 1, created_at: -1 })
+      .toArray();
+
+    return NextResponse.json(tasks);
   } catch (err: any) {
     console.error('GET /api/tasks error:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });
@@ -74,13 +58,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Forbidden: PM role required' }, { status: 403 });
     }
 
-    const { data: creator } = await supabaseAdmin
-      .from('profiles')
-      .select('id')
-      .eq('email', session.email)
-      .maybeSingle();
+    const db = await getDb();
+    const creator = await db.collection('users').findOne({
+      email: { $regex: new RegExp(`^${session.email.trim()}$`, 'i') }
+    });
 
-    const body = await request.json();
+    const body = await request.json() as any;
     const {
       list_id, name, description, status_id, priority = 'normal',
       start_date, due_date, time_estimate, parent_task_id,
@@ -99,62 +82,109 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'list_id and name are required' }, { status: 400 });
     }
 
-    const { data: lastTask } = await supabaseAdmin
-      .from('tasks')
-      .select('position')
-      .eq('list_id', list_id)
-      .order('position', { ascending: false })
+    // Resolve list & space
+    const listDoc = await db.collection('lists').findOne({ id: list_id });
+    const spaceDoc = listDoc?.space_id ? await db.collection('spaces').findOne({ id: listDoc.space_id }) : null;
+
+    // Resolve status
+    let statusObj = null;
+    if (status_id) {
+      statusObj = await db.collection('statuses').findOne({ id: status_id });
+      if (!statusObj && listDoc?.statuses) {
+        statusObj = listDoc.statuses.find((s: any) => s.id === status_id) || null;
+      }
+    }
+    if (!statusObj && listDoc && listDoc.statuses?.length > 0) {
+      statusObj = listDoc.statuses[0];
+    }
+
+    // Calculate position
+    const lastTask = await db.collection('tasks')
+      .find({ list_id })
+      .sort({ position: -1 })
       .limit(1)
-      .maybeSingle();
+      .next();
 
     const position = (lastTask?.position ?? -1) + 1;
 
-    const { data: task, error: taskErr } = await supabaseAdmin
-      .from('tasks')
-      .insert({
-        list_id, name, description, status_id, priority,
-        start_date: start_date || null,
-        due_date: due_date || null,
-        time_estimate: time_estimate || null,
-        parent_task_id: parent_task_id || null,
-        created_by: creator?.id,
-        position,
-      })
-      .select()
-      .single();
-
-    if (taskErr) throw taskErr;
-
+    // Resolve assignees
+    let assignees: any[] = [];
     if (finalAssigneeIds.length > 0) {
-      await supabaseAdmin.from('task_assignees').insert(
-        finalAssigneeIds.map((uid: string) => ({
-          task_id: task.id,
-          user_id: uid,
-          assigned_by: creator?.id,
-        }))
-      );
+      const assignedUsers = await db.collection('users')
+        .find({ id: { $in: finalAssigneeIds } })
+        .toArray();
+
+      assignees = assignedUsers.map(u => ({
+        assigned_at: new Date().toISOString(),
+        assigned_by: creator?.id || null,
+        profile: {
+          id: u.id,
+          full_name: u.full_name || u.fullName,
+          email: u.email,
+          avatar_url: u.avatar_url || u.avatarUrl || null,
+          role: u.role
+        }
+      }));
     }
 
+    // Resolve tags
+    let tags: any[] = [];
     if (tag_ids.length > 0) {
-      await supabaseAdmin.from('task_tag_links').insert(
-        tag_ids.map((tid: string) => ({ task_id: task.id, tag_id: tid }))
-      );
+      const matchedTags = await db.collection('tags')
+        .find({ id: { $in: tag_ids } })
+        .toArray();
+      tags = matchedTags.map(t => ({ tag: { id: t.id, name: t.name, color: t.color } }));
     }
 
+    const taskId = randomUUID();
+    const now = new Date().toISOString();
+
+    const newTaskDoc = {
+      id: taskId,
+      name,
+      description: description || '',
+      list_id,
+      status_id: statusObj?.id || status_id || null,
+      priority,
+      start_date: start_date || null,
+      due_date: due_date || null,
+      date_closed: null,
+      time_estimate: time_estimate || null,
+      time_spent: 0,
+      position,
+      is_archived: false,
+      parent_task_id: parent_task_id || null,
+      created_by: creator?.id || null,
+      created_at: now,
+      updated_at: now,
+      status: statusObj,
+      list: listDoc ? {
+        id: listDoc.id,
+        name: listDoc.name,
+        space: spaceDoc ? { id: spaceDoc.id, name: spaceDoc.name } : null
+      } : null,
+      assignees,
+      tags
+    };
+
+    await db.collection('tasks').insertOne(newTaskDoc);
+
+    // Notifications for assignees
     if (finalAssigneeIds.length > 0 && creator?.id) {
-      await supabaseAdmin.from('notifications').insert(
-        finalAssigneeIds.map((uid: string) => ({
-          user_id: uid,
-          type: 'assigned',
-          task_id: task.id,
-          actor_id: creator.id,
-          message: `You were assigned to "${name}"`,
-          is_read: false,
-        }))
-      );
+      const notifs = finalAssigneeIds.map((uid: string) => ({
+        id: randomUUID(),
+        user_id: uid,
+        type: 'assigned',
+        task_id: taskId,
+        actor_id: creator.id,
+        message: `You were assigned to "${name}"`,
+        is_read: false,
+        created_at: now
+      }));
+      await db.collection('notifications').insertMany(notifs).catch(() => {});
     }
 
-    return NextResponse.json(task, { status: 201 });
+    return NextResponse.json(newTaskDoc, { status: 201 });
   } catch (err: any) {
     console.error('POST /api/tasks error:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });

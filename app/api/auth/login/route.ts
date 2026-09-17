@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getUserByEmail, verifyPassword, addLog } from '@/shared/utils/db';
 import { signSession } from '@/shared/utils/session';
-import { supabaseAdmin } from '@/shared/utils/supabaseAdmin';
 
 const ALLOWED_DOMAINS = ['takeoutmedia.xyz', 'tmlabs.xyz'];
 
@@ -13,7 +12,8 @@ function validateEmail(email: string): boolean {
 
 export async function POST(request: Request) {
   try {
-    const { email, password } = await request.json();
+    const body = await request.json() as { email?: string; password?: string };
+    const { email, password } = body;
 
     if (!email) {
       return NextResponse.json({ error: 'Email address is required' }, { status: 400 });
@@ -62,24 +62,9 @@ export async function POST(request: Request) {
 
     let isPasswordValid = false;
 
-    // Check local password hash
+    // Check password hash
     if (user.passwordHash && user.passwordSalt) {
       isPasswordValid = verifyPassword(password.trim(), user.passwordHash, user.passwordSalt);
-    }
-
-    // Fallback: Check Supabase Auth if local fails and Supabase is configured
-    if (!isPasswordValid && supabaseAdmin) {
-      try {
-        const authRes = await supabaseAdmin.auth.signInWithPassword({
-          email: normalizedEmail,
-          password: password.trim(),
-        });
-        if (authRes.data?.user) {
-          isPasswordValid = true;
-        }
-      } catch (err) {
-        // Ignore Supabase auth error
-      }
     }
 
     if (!isPasswordValid) {

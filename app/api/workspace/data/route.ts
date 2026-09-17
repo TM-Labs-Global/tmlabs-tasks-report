@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySession } from '@/shared/utils/session';
-import { supabaseAdmin } from '@/shared/utils/supabaseAdmin';
+import { getDb } from '@/shared/utils/mongoClient';
 
 export async function GET() {
   try {
@@ -11,44 +11,18 @@ export async function GET() {
     const session = await verifySession(token);
     if (!session) return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
 
-    // Execute queries in parallel using supabaseAdmin for maximum speed & stability
-    const [
-      { data: profilesData, error: profilesErr },
-      { data: allSpaces, error: spacesErr },
-      { data: allFolders, error: foldersErr },
-      { data: allLists, error: listsErr },
-      { data: dbTasks, error: tasksErr }
-    ] = await Promise.all([
-      supabaseAdmin.from('profiles').select('*').eq('status', 'active'),
-      supabaseAdmin.from('spaces').select('*').order('position', { ascending: true }),
-      supabaseAdmin.from('folders').select('*').order('position', { ascending: true }),
-      supabaseAdmin.from('lists').select('*, statuses(*)').order('position', { ascending: true }),
-      supabaseAdmin.from('tasks').select('*, status:statuses(*), list:lists(id, name), assignees:task_assignees(profile:profiles(*)), tags:task_tag_links(tag:task_tags(*))').order('position', { ascending: true })
+    const db = await getDb();
+
+    // Execute queries in parallel using native MongoDB
+    const [profilesData, allSpaces, allFolders, allLists, dbTasks] = await Promise.all([
+      db.collection('users').find({ status: { $ne: 'deactivated' } }).toArray(),
+      db.collection('spaces').find({}).sort({ position: 1, created_at: 1 }).toArray(),
+      db.collection('folders').find({}).sort({ position: 1, created_at: 1 }).toArray(),
+      db.collection('lists').find({}).sort({ position: 1, created_at: 1 }).toArray(),
+      db.collection('tasks').find({ is_archived: { $ne: true } }).sort({ position: 1, created_at: -1 }).toArray()
     ]);
 
-    if (profilesErr) console.error('Profiles query error:', profilesErr);
-    if (spacesErr) console.error('Spaces query error:', spacesErr);
-    if (foldersErr) console.error('Folders query error:', foldersErr);
-    if (listsErr) console.error('Lists query error:', listsErr);
-    if (tasksErr) console.error('Tasks query error:', tasksErr);
-
-    const DEFAULT_SPACES = [
-      { id: 'space-in-house', name: 'In-House Projects', color: '#FF3396', position: 1 },
-      { id: 'space-client-projects', name: 'Client Projects', color: '#00F2FE', position: 2 },
-      { id: 'space-growth-marketing', name: 'Growth & Marketing', color: '#7C3AED', position: 3 }
-    ];
-
-    let effectiveSpaces = allSpaces && allSpaces.length > 0 ? allSpaces : DEFAULT_SPACES;
-
-    // Ensure the 3 primary spaces always exist in effective spaces if missing
-    const existingNames = new Set(effectiveSpaces.map((s: any) => s.name?.toLowerCase()));
-    DEFAULT_SPACES.forEach(defSpace => {
-      if (!existingNames.has(defSpace.name.toLowerCase())) {
-        effectiveSpaces.push(defSpace);
-      }
-    });
-
-    const hierarchy = effectiveSpaces.map((space: any) => {
+    const hierarchy = allSpaces.map((space: any) => {
       const spaceFolders = (allFolders || []).filter((f: any) => f.space_id === space.id).map((folder: any) => ({
         ...folder,
         lists: (allLists || []).filter((l: any) => l.folder_id === folder.id)

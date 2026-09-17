@@ -1,26 +1,16 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/shared/utils/supabaseAdmin';
+import { getDb } from '@/shared/utils/mongoClient';
 
 export async function GET() {
   try {
-    // Head request count query to ping Supabase database engine
-    const { count, error } = await supabaseAdmin
-      .from('profiles')
-      .select('id', { count: 'exact', head: true });
-
-    if (error) {
-      console.error('Keepalive ping database error:', error);
-      return NextResponse.json({
-        status: 'error',
-        error: error.message,
-        timestamp: new Date().toISOString()
-      }, { status: 500 });
-    }
+    const db = await getDb();
+    const count = await db.collection('users').countDocuments();
 
     return NextResponse.json({
       status: 'ok',
-      message: 'Supabase project engine keepalive active',
-      profilesCount: count,
+      message: 'MongoDB Atlas cluster keepalive active',
+      database: 'tmlabs-tasks',
+      usersCount: count,
       timestamp: new Date().toISOString()
     }, { status: 200 });
   } catch (err: any) {

@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySession } from '@/shared/utils/session';
-import { supabaseAdmin } from '@/shared/utils/supabaseAdmin';
+import { getDb } from '@/shared/utils/mongoClient';
+import { randomUUID } from 'crypto';
 
 // GET /api/workspace/spaces
 export async function GET() {
@@ -12,16 +13,23 @@ export async function GET() {
     const session = await verifySession(token);
     if (!session) return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
 
-    const { data: spaces } = await supabaseAdmin
-      .from('spaces')
-      .select(`
-        *,
-        folders(*, lists(*, statuses(*))),
-        lists!inner(id, name, folder_id, statuses(*))
-      `)
-      .order('position', { ascending: true });
+    const db = await getDb();
+    const [spaces, folders, lists] = await Promise.all([
+      db.collection('spaces').find({}).sort({ position: 1, created_at: 1 }).toArray(),
+      db.collection('folders').find({}).sort({ position: 1, created_at: 1 }).toArray(),
+      db.collection('lists').find({}).sort({ position: 1, created_at: 1 }).toArray()
+    ]);
 
-    return NextResponse.json(spaces || []);
+    const enriched = spaces.map(space => ({
+      ...space,
+      folders: folders.filter(f => f.space_id === space.id).map(f => ({
+        ...f,
+        lists: lists.filter(l => l.folder_id === f.id)
+      })),
+      lists: lists.filter(l => l.space_id === space.id)
+    }));
+
+    return NextResponse.json(enriched);
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
@@ -38,24 +46,36 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { data: creator } = await supabaseAdmin
-      .from('profiles').select('id').eq('email', session.email).maybeSingle();
+    const db = await getDb();
+    const creator = await db.collection('users').findOne({
+      email: { $regex: new RegExp(`^${session.email.trim()}$`, 'i') }
+    });
 
-    const body = await request.json();
+    const body = await request.json() as any;
     const { name, color, icon } = body;
     if (!name) return NextResponse.json({ error: 'name is required' }, { status: 400 });
 
-    const { data: lastSpace } = await supabaseAdmin
-      .from('spaces').select('position').order('position', { ascending: false }).limit(1).maybeSingle();
+    const lastSpace = await db.collection('spaces')
+      .find({})
+      .sort({ position: -1 })
+      .limit(1)
+      .next();
+
     const position = (lastSpace?.position ?? -1) + 1;
+    const spaceId = randomUUID();
 
-    const { data, error } = await supabaseAdmin
-      .from('spaces')
-      .insert({ name, color: color || '#6633FF', icon: icon || '📁', position, created_by: creator?.id })
-      .select().single();
-    if (error) throw error;
+    const newSpace = {
+      id: spaceId,
+      name,
+      color: color || '#6633FF',
+      icon: icon || '📁',
+      position,
+      created_by: creator?.id || null,
+      created_at: new Date().toISOString()
+    };
 
-    return NextResponse.json(data, { status: 201 });
+    await db.collection('spaces').insertOne(newSpace);
+    return NextResponse.json(newSpace, { status: 201 });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

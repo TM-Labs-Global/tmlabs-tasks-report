@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySession } from '@/shared/utils/session';
-import { supabaseAdmin } from '@/shared/utils/supabaseAdmin';
+import { getDb } from '@/shared/utils/mongoClient';
 
 // PATCH /api/workspace/lists/[listId]
 export async function PATCH(
@@ -18,7 +18,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const body = await request.json();
+    const body = await request.json() as any;
     const { name, color, position, folder_id } = body;
 
     const update: any = {};
@@ -27,15 +27,22 @@ export async function PATCH(
     if (position !== undefined) update.position = position;
     if (folder_id !== undefined) update.folder_id = folder_id;
 
-    const { data, error } = await supabaseAdmin
-      .from('lists')
-      .update(update)
-      .eq('id', listId)
-      .select()
-      .single();
+    const db = await getDb();
+    const updated = await db.collection('lists').findOneAndUpdate(
+      { id: listId },
+      { $set: update },
+      { returnDocument: 'after' }
+    );
 
-    if (error) throw error;
-    return NextResponse.json(data);
+    // If list name changed, also update list.name in tasks
+    if (name !== undefined) {
+      await db.collection('tasks').updateMany(
+        { list_id: listId },
+        { $set: { 'list.name': name } }
+      );
+    }
+
+    return NextResponse.json(updated);
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
@@ -56,24 +63,19 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Cascade delete of lists: tasks, statuses, lists
-    const { data: tasks } = await supabaseAdmin.from('tasks').select('id').eq('list_id', listId);
-    const taskIds = (tasks || []).map(t => t.id);
+    const db = await getDb();
 
-    if (taskIds.length > 0) {
-      await supabaseAdmin.from('task_assignees').delete().in('task_id', taskIds);
-      await supabaseAdmin.from('task_tag_links').delete().in('task_id', taskIds);
-      await supabaseAdmin.from('task_dependencies').delete().in('task_id', taskIds);
-      await supabaseAdmin.from('task_dependencies').delete().in('depends_on_task_id', taskIds);
-      await supabaseAdmin.from('comments').delete().in('task_id', taskIds);
-      await supabaseAdmin.from('notifications').delete().in('task_id', taskIds);
-      await supabaseAdmin.from('task_history').delete().in('task_id', taskIds);
-      await supabaseAdmin.from('tasks').delete().in('id', taskIds);
-    }
-    await supabaseAdmin.from('statuses').delete().eq('list_id', listId);
-    
-    const { error } = await supabaseAdmin.from('lists').delete().eq('id', listId);
-    if (error) throw error;
+    // Find all tasks in list
+    const tasks = await db.collection('tasks').find({ list_id: listId }).toArray();
+    const taskIds = tasks.map(t => t.id);
+
+    await Promise.all([
+      db.collection('tasks').deleteMany({ list_id: listId }),
+      db.collection('comments').deleteMany({ task_id: { $in: taskIds } }),
+      db.collection('notifications').deleteMany({ task_id: { $in: taskIds } }),
+      db.collection('statuses').deleteMany({ list_id: listId }),
+      db.collection('lists').deleteOne({ id: listId })
+    ]);
 
     return NextResponse.json({ success: true });
   } catch (err: any) {

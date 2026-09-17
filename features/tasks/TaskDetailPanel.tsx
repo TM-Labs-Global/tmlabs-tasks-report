@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, 
-  Calendar as CalendarIcon, 
   User, 
   Tag, 
   Clock, 
@@ -18,20 +17,25 @@ import {
   PlusCircle,
   AlertTriangle,
   History,
-  Lock
+  Lock,
+  Loader2,
+  ExternalLink,
+  Upload,
+  FileText
 } from 'lucide-react';
-import { SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { SheetContent } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { formatDistanceToNow, format } from 'date-fns';
 import { useAuth } from '@/shared/context/AuthContext';
 import { useWorkspace } from '@/shared/context/WorkspaceContext';
+import { DatePicker } from './DatePicker';
+import { TaskCreateModal } from './TaskCreateModal';
 
 interface TaskDetailPanelProps {
   taskId: string;
@@ -69,8 +73,11 @@ export function TaskDetailPanel({
   const [loading, setLoading] = useState(true);
   const [errorState, setErrorState] = useState<{ code: number; message: string } | null>(null);
   const [commentText, setCommentText] = useState('');
-  const [newSubtaskName, setNewSubtaskName] = useState('');
-  const [addingSubtask, setAddingSubtask] = useState(false);
+  
+  // Subtask modal & upload state
+  const [subtaskModalOpen, setSubtaskModalOpen] = useState(false);
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch full task details
   const fetchTaskDetails = async () => {
@@ -151,7 +158,6 @@ export function TaskDetailPanel({
     );
   }
 
-
   const isPM = role === 'product_manager';
   const myProfile = members.find(m => m.email === user?.email);
   const isAssigned = task.assignees?.some((a: any) => a.profile?.id === myProfile?.id);
@@ -172,7 +178,7 @@ export function TaskDetailPanel({
         return;
       }
       const updatedTask = await res.json();
-      setTask(updatedTask);
+      setTask((prev: any) => ({ ...prev, ...updatedTask }));
       if (onRefresh) onRefresh();
       refreshData();
     } catch (err) {
@@ -204,10 +210,16 @@ export function TaskDetailPanel({
     }
   };
 
-  const handleAddSubtask = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newSubtaskName.trim()) return;
-
+  // Subtask creation using the modal
+  const handleCreateSubtask = async (data: {
+    name: string;
+    statusId: string;
+    assigneeId?: string;
+    dueDate?: string;
+    priority?: string;
+    description?: string;
+    parent_task_id?: string | null;
+  }) => {
     try {
       const res = await fetch('/api/tasks', {
         method: 'POST',
@@ -215,24 +227,78 @@ export function TaskDetailPanel({
         body: JSON.stringify({
           list_id: task.list_id,
           parent_task_id: taskId,
-          name: newSubtaskName.trim(),
-          status_id: task.status_id
+          name: data.name,
+          status_id: data.statusId,
+          assignee_ids: data.assigneeId ? [data.assigneeId] : [],
+          due_date: data.dueDate,
+          priority: data.priority,
+          description: data.description,
         }),
       });
 
       if (res.ok) {
-        setNewSubtaskName('');
-        setAddingSubtask(false);
+        setSubtaskModalOpen(false);
         fetchTaskDetails();
         if (onRefresh) onRefresh();
         refreshData();
       }
     } catch (err) {
-      console.error(err);
+      console.error('Failed to create subtask:', err);
     }
   };
 
-  // ── Assignee helpers ──────────────────────────────────────────────────────
+  // Attachment upload handler
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploadingAttachment(true);
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const formData = new FormData();
+        formData.append('file', files[i]);
+
+        const res = await fetch(`/api/tasks/${taskId}/attachments`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          alert(`Failed to upload ${files[i].name}: ${err.error || 'Server error'}`);
+        }
+      }
+      fetchTaskDetails();
+    } catch (err) {
+      console.error('Error uploading file:', err);
+      alert('Error uploading attachment.');
+    } finally {
+      setUploadingAttachment(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDeleteAttachment = async (attachmentId: string) => {
+    if (!confirm('Are you sure you want to delete this attachment?')) return;
+    try {
+      const res = await fetch(`/api/tasks/${taskId}/attachments`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attachmentId }),
+      });
+
+      if (res.ok) {
+        setTask((prev: any) => ({
+          ...prev,
+          attachments: (prev.attachments || []).filter((a: any) => a.id !== attachmentId)
+        }));
+      }
+    } catch (err) {
+      console.error('Error deleting attachment:', err);
+    }
+  };
+
+  // Assignee helpers
   const currentAssigneeIds: string[] = (task.assignees || [])
     .map((a: any) => a.profile?.id)
     .filter(Boolean);
@@ -245,10 +311,17 @@ export function TaskDetailPanel({
     await handleFieldUpdate({ assignee_ids: newIds });
   };
 
+  const formatFileSize = (bytes?: number) => {
+    if (!bytes) return '';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
   return (
-    <SheetContent showCloseButton={false} className="bg-card border-l border-slate-700/20 w-full sm:max-w-2xl p-0 text-primary flex flex-col h-full shadow-2xl">
+    <SheetContent showCloseButton={false} className="bg-card border-l border-slate-700/20 w-full sm:max-w-2xl p-0 text-primary flex flex-col h-full shadow-2xl overflow-hidden">
       {/* Top action header */}
-      <div className="p-4 border-b border-slate-700/20 flex items-center justify-between bg-elevated/20">
+      <div className="p-4 border-b border-slate-700/20 flex items-center justify-between bg-elevated/20 shrink-0">
         <span className="text-caption font-bold text-muted uppercase tracking-wider">
           {task.list?.space?.name} &gt; {task.list?.name}
         </span>
@@ -259,305 +332,416 @@ export function TaskDetailPanel({
         </div>
       </div>
 
-      <ScrollArea className="flex-1 p-6">
-        <div className="space-y-6">
-          {/* Title Area */}
-          <div className="space-y-2">
+      {/* Main Scrollable Content */}
+      <div className="flex-1 overflow-y-auto p-6 space-y-6 min-h-0">
+        {/* Title Area */}
+        <div className="space-y-2">
+          {canEditAll ? (
+            <Input 
+              value={task.name}
+              onChange={e => handleFieldUpdate({ name: e.target.value })}
+              className="text-lg font-bold text-primary bg-transparent border-transparent hover:border-slate-700/40 focus:border-brand-pink focus:bg-secondary/40 p-1.5 rounded-xl h-auto w-full transition-all"
+            />
+          ) : (
+            <h2 className="text-lg font-bold text-primary px-1.5">{task.name}</h2>
+          )}
+        </div>
+
+        {/* Core Properties Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-elevated/10 p-4 border border-slate-700/10 rounded-2xl">
+          {/* Status Field */}
+          <div className="space-y-1.5">
+            <label className="text-caption font-bold text-secondary uppercase tracking-wide">Status</label>
+            {canEditStatus ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start h-9 rounded-xl border-slate-700/50 bg-secondary/30 text-caption font-semibold cursor-pointer">
+                    <span className="w-2.5 h-2.5 rounded-full mr-2" style={{ backgroundColor: task.status?.color || '#94a3b8' }} />
+                    {task.status?.name}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="bg-card border border-slate-700/30 text-primary rounded-xl w-48">
+                  {task.list?.statuses?.map((s: any) => (
+                    <DropdownMenuItem 
+                      key={s.id} 
+                      onClick={() => handleFieldUpdate({ status_id: s.id })}
+                      className="gap-2 cursor-pointer text-caption font-medium hover:bg-elevated"
+                    >
+                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: s.color }} />
+                      {s.name}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <div className="flex items-center h-9 px-3 bg-secondary/30 border border-slate-700/10 rounded-xl text-caption font-semibold">
+                <span className="w-2.5 h-2.5 rounded-full mr-2" style={{ backgroundColor: task.status?.color || '#94a3b8' }} />
+                {task.status?.name}
+              </div>
+            )}
+          </div>
+
+          {/* Priority Field */}
+          <div className="space-y-1.5">
+            <label className="text-caption font-bold text-secondary uppercase tracking-wide">Priority</label>
+            {canEditAll ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" title={getPriorityTooltip ? getPriorityTooltip(task.priority) : 'Priority'} className="w-full justify-start h-9 rounded-xl border-slate-700/50 bg-secondary/30 text-caption font-semibold cursor-pointer">
+                    {getPriorityLabel(task.priority)}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="bg-card border border-slate-700/30 text-primary rounded-xl w-48">
+                  {['urgent', 'high', 'normal', 'low'].map(p => (
+                    <DropdownMenuItem 
+                      key={p} 
+                      onClick={() => handleFieldUpdate({ priority: p })}
+                      className="cursor-pointer text-caption font-medium hover:bg-elevated"
+                      title={p === 'urgent' ? 'Urgent Priority' : p === 'high' ? 'High Priority' : p === 'normal' ? 'Normal Priority' : 'Low Priority / No Priority'}
+                    >
+                      {p.toUpperCase()}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <div title={getPriorityTooltip ? getPriorityTooltip(task.priority) : 'Priority'} className="flex items-center h-9 px-3 bg-secondary/30 border border-slate-700/10 rounded-xl text-caption font-semibold cursor-pointer">
+                {getPriorityLabel(task.priority)}
+              </div>
+            )}
+          </div>
+
+          {/* Due Date with Calendar DatePicker */}
+          <div className="space-y-1.5">
+            <label className="text-caption font-bold text-secondary uppercase tracking-wide">Due Date</label>
+            {canEditAll ? (
+              <DatePicker
+                value={task.due_date}
+                onChange={d => handleFieldUpdate({ due_date: d || null })}
+                placeholder="Set due date"
+                className="w-full"
+              />
+            ) : (
+              <div className="flex items-center h-9 px-3 bg-secondary/30 border border-slate-700/10 rounded-xl text-caption font-semibold">
+                {task.due_date ? format(new Date(task.due_date), 'MMM d, yyyy') : 'No Due Date'}
+              </div>
+            )}
+          </div>
+
+          {/* Time Estimate */}
+          <div className="space-y-1.5">
+            <label className="text-caption font-bold text-secondary uppercase tracking-wide">Estimate (Hours)</label>
             {canEditAll ? (
               <Input 
-                value={task.name}
-                onChange={e => handleFieldUpdate({ name: e.target.value })}
-                className="text-lg font-bold text-primary bg-transparent border-transparent hover:border-slate-700/40 focus:border-brand-pink focus:bg-secondary/40 p-1.5 rounded-xl h-auto w-full transition-all"
+                type="number"
+                placeholder="e.g. 8"
+                value={task.time_estimate ? task.time_estimate / (3600 * 1000) : ''}
+                onChange={e => handleFieldUpdate({ time_estimate: e.target.value ? parseFloat(e.target.value) * 3600 * 1000 : null })}
+                className="bg-secondary/30 border-slate-700/50 text-primary rounded-xl focus:border-brand-pink"
               />
             ) : (
-              <h2 className="text-lg font-bold text-primary px-1.5">{task.name}</h2>
+              <div className="flex items-center h-9 px-3 bg-secondary/30 border border-slate-700/10 rounded-xl text-caption font-semibold">
+                {task.time_estimate ? `${task.time_estimate / (3600 * 1000)}h` : 'No Estimate'}
+              </div>
             )}
           </div>
+        </div>
 
-          {/* Core Properties Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-elevated/10 p-4 border border-slate-700/10 rounded-2xl">
-            {/* Status Field */}
-            <div className="space-y-1.5">
-              <label className="text-caption font-bold text-secondary uppercase tracking-wide">Status</label>
-              {canEditStatus ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start h-9 rounded-xl border-slate-700/50 bg-secondary/30 text-caption font-semibold cursor-pointer">
-                      <span className="w-2.5 h-2.5 rounded-full mr-2" style={{ backgroundColor: task.status?.color || '#94a3b8' }} />
-                      {task.status?.name}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="bg-card border border-slate-700/30 text-primary rounded-xl w-48">
-                    {task.list?.statuses?.map((s: any) => (
-                      <DropdownMenuItem 
-                        key={s.id} 
-                        onClick={() => handleFieldUpdate({ status_id: s.id })}
-                        className="gap-2 cursor-pointer text-caption font-medium hover:bg-elevated"
-                      >
-                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: s.color }} />
-                        {s.name}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
-                <div className="flex items-center h-9 px-3 bg-secondary/30 border border-slate-700/10 rounded-xl text-caption font-semibold">
-                  <span className="w-2.5 h-2.5 rounded-full mr-2" style={{ backgroundColor: task.status?.color || '#94a3b8' }} />
-                  {task.status?.name}
-                </div>
-              )}
-            </div>
-
-            {/* Priority Field */}
-            <div className="space-y-1.5">
-              <label className="text-caption font-bold text-secondary uppercase tracking-wide">Priority</label>
-              {canEditAll ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" title={getPriorityTooltip ? getPriorityTooltip(task.priority) : 'Priority'} className="w-full justify-start h-9 rounded-xl border-slate-700/50 bg-secondary/30 text-caption font-semibold cursor-pointer">
-                      {getPriorityLabel(task.priority)}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="bg-card border border-slate-700/30 text-primary rounded-xl w-48">
-                    {['urgent', 'high', 'normal', 'low'].map(p => (
-                      <DropdownMenuItem 
-                        key={p} 
-                        onClick={() => handleFieldUpdate({ priority: p })}
-                        className="cursor-pointer text-caption font-medium hover:bg-elevated"
-                        title={p === 'urgent' ? 'Urgent Priority' : p === 'high' ? 'High Priority' : p === 'normal' ? 'Normal Priority' : 'Low Priority / No Priority'}
-                      >
-                        {p.toUpperCase()}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
-                <div title={getPriorityTooltip ? getPriorityTooltip(task.priority) : 'Priority'} className="flex items-center h-9 px-3 bg-secondary/30 border border-slate-700/10 rounded-xl text-caption font-semibold cursor-pointer">
-                  {getPriorityLabel(task.priority)}
-                </div>
-              )}
-            </div>
-
-            {/* Due Date */}
-            <div className="space-y-1.5">
-              <label className="text-caption font-bold text-secondary uppercase tracking-wide">Due Date</label>
-              {canEditAll ? (
-                <Input 
-                  type="date"
-                  value={task.due_date ? format(new Date(task.due_date), 'yyyy-MM-dd') : ''}
-                  onChange={e => handleFieldUpdate({ due_date: e.target.value || null })}
-                  className="bg-secondary/30 border-slate-700/50 text-primary rounded-xl focus:border-brand-pink"
-                />
-              ) : (
-                <div className="flex items-center h-9 px-3 bg-secondary/30 border border-slate-700/10 rounded-xl text-caption font-semibold">
-                  {task.due_date ? format(new Date(task.due_date), 'MMM d, yyyy') : 'No Due Date'}
-                </div>
-              )}
-            </div>
-
-            {/* Time Estimate */}
-            <div className="space-y-1.5">
-              <label className="text-caption font-bold text-secondary uppercase tracking-wide">Estimate (Hours)</label>
-              {canEditAll ? (
-                <Input 
-                  type="number"
-                  placeholder="e.g. 8"
-                  value={task.time_estimate ? task.time_estimate / (3600 * 1000) : ''}
-                  onChange={e => handleFieldUpdate({ time_estimate: e.target.value ? parseFloat(e.target.value) * 3600 * 1000 : null })}
-                  className="bg-secondary/30 border-slate-700/50 text-primary rounded-xl focus:border-brand-pink"
-                />
-              ) : (
-                <div className="flex items-center h-9 px-3 bg-secondary/30 border border-slate-700/10 rounded-xl text-caption font-semibold">
-                  {task.time_estimate ? `${task.time_estimate / (3600 * 1000)}h` : 'No Estimate'}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* ── Assignees ── */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-caption font-bold text-secondary uppercase tracking-wide">Assignees</label>
-              {canEditAll && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-brand-pink hover:text-brand-pink/80 rounded-lg cursor-pointer h-7 text-[11px] font-bold"
-                    >
-                      <Plus size={12} /> Add
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="bg-card border border-slate-700/30 text-primary rounded-xl w-52 max-h-60 overflow-y-auto">
-                    {members.length === 0 ? (
-                      <DropdownMenuItem disabled className="text-caption text-muted">
-                        No members found
-                      </DropdownMenuItem>
-                    ) : (
-                      members.map((member: any) => {
-                        const isAssigned = currentAssigneeIds.includes(member.id);
-                        return (
-                          <DropdownMenuItem
-                            key={member.id}
-                            onClick={() => handleToggleAssignee(member.id)}
-                            className="gap-2 cursor-pointer text-caption font-medium hover:bg-elevated"
-                          >
-                            <div className="w-6 h-6 rounded-full bg-brand-pink/20 text-brand-pink flex items-center justify-center font-bold text-[10px] flex-shrink-0 uppercase">
-                              {(member.full_name || member.email || '?').charAt(0)}
-                            </div>
-                            <span className="flex-1 truncate">{member.full_name || member.email}</span>
-                            {isAssigned && <CheckCircle size={14} className="text-brand-pink flex-shrink-0" />}
-                          </DropdownMenuItem>
-                        );
-                      })
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-            </div>
-
-            {task.assignees && task.assignees.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {task.assignees.map((a: any) => {
-                  const name = a.profile?.full_name || a.profile?.email || 'Unknown';
-                  const initial = name.charAt(0).toUpperCase();
-                  return (
-                    <div
-                      key={a.profile?.id}
-                      className="flex items-center gap-1.5 px-2 py-1 bg-secondary/30 border border-slate-700/20 rounded-full text-[11px] font-semibold text-primary"
-                    >
-                      <div className="w-5 h-5 rounded-full bg-brand-pink/20 text-brand-pink flex items-center justify-center font-bold text-[9px] uppercase flex-shrink-0">
-                        {initial}
-                      </div>
-                      <span className="truncate max-w-[120px]">{name}</span>
-                      {canEditAll && (
-                        <button
-                          onClick={() => handleToggleAssignee(a.profile?.id)}
-                          className="text-muted hover:text-red-400 transition-colors ml-0.5 flex-shrink-0 cursor-pointer"
-                          title={`Remove ${name}`}
+        {/* Assignees */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-caption font-bold text-secondary uppercase tracking-wide">Assignees</label>
+            {canEditAll && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-brand-pink hover:text-brand-pink/80 rounded-lg cursor-pointer h-7 text-[11px] font-bold"
+                  >
+                    <Plus size={12} /> Add
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="bg-card border border-slate-700/30 text-primary rounded-xl w-52 max-h-60 overflow-y-auto">
+                  {members.length === 0 ? (
+                    <DropdownMenuItem disabled className="text-caption text-muted">
+                      No members found
+                    </DropdownMenuItem>
+                  ) : (
+                    members.map((member: any) => {
+                      const isAssigned = currentAssigneeIds.includes(member.id);
+                      return (
+                        <DropdownMenuItem
+                          key={member.id}
+                          onClick={() => handleToggleAssignee(member.id)}
+                          className="gap-2 cursor-pointer text-caption font-medium hover:bg-elevated"
                         >
-                          ×
-                        </button>
-                      )}
+                          <div className="w-6 h-6 rounded-full bg-brand-pink/20 text-brand-pink flex items-center justify-center font-bold text-[10px] flex-shrink-0 uppercase">
+                            {(member.full_name || member.email || '?').charAt(0)}
+                          </div>
+                          <span className="flex-1 truncate">{member.full_name || member.email}</span>
+                          {isAssigned && <CheckCircle size={14} className="text-brand-pink flex-shrink-0" />}
+                        </DropdownMenuItem>
+                      );
+                    })
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+
+          {task.assignees && task.assignees.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {task.assignees.map((a: any) => {
+                const name = a.profile?.full_name || a.profile?.email || 'Unknown';
+                const initial = name.charAt(0).toUpperCase();
+                return (
+                  <div
+                    key={a.profile?.id}
+                    className="flex items-center gap-1.5 px-2 py-1 bg-secondary/30 border border-slate-700/20 rounded-full text-[11px] font-semibold text-primary"
+                  >
+                    <div className="w-5 h-5 rounded-full bg-brand-pink/20 text-brand-pink flex items-center justify-center font-bold text-[9px] uppercase flex-shrink-0">
+                      {initial}
                     </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-caption text-muted text-center py-2 border border-dashed border-slate-700/10 rounded-xl">
-                No assignees yet.
-              </div>
-            )}
-          </div>
+                    <span className="truncate max-w-[120px]">{name}</span>
+                    {canEditAll && (
+                      <button
+                        onClick={() => handleToggleAssignee(a.profile?.id)}
+                        className="text-muted hover:text-red-400 transition-colors ml-0.5 flex-shrink-0 cursor-pointer"
+                        title={`Remove ${name}`}
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-caption text-muted text-center py-2 border border-dashed border-slate-700/10 rounded-xl">
+              No assignees yet.
+            </div>
+          )}
+        </div>
 
-          {/* Description */}
-          <div className="space-y-2">
-            <label className="text-caption font-bold text-secondary uppercase tracking-wide">Description</label>
-            {canEditAll ? (
-              <Textarea 
-                value={task.description || ''}
-                onChange={e => handleFieldUpdate({ description: e.target.value })}
-                placeholder="Add details about this task..."
-                className="bg-secondary/20 border-slate-700/50 text-primary rounded-xl min-h-[100px] focus:border-brand-pink focus:ring-1 focus:ring-brand-pink/20"
-              />
-            ) : (
-              <p className="bg-secondary/10 border border-slate-700/10 p-3 rounded-xl text-body text-secondary min-h-[60px] whitespace-pre-wrap">
-                {task.description || 'No description provided.'}
-              </p>
-            )}
-          </div>
+        {/* Description */}
+        <div className="space-y-2">
+          <label className="text-caption font-bold text-secondary uppercase tracking-wide">Description</label>
+          {canEditAll ? (
+            <Textarea 
+              value={task.description || ''}
+              onChange={e => handleFieldUpdate({ description: e.target.value })}
+              placeholder="Add details about this task..."
+              className="bg-secondary/20 border-slate-700/50 text-primary rounded-xl min-h-[100px] focus:border-brand-pink focus:ring-1 focus:ring-brand-pink/20"
+            />
+          ) : (
+            <p className="bg-secondary/10 border border-slate-700/10 p-3 rounded-xl text-body text-secondary min-h-[60px] whitespace-pre-wrap">
+              {task.description || 'No description provided.'}
+            </p>
+          )}
+        </div>
 
-          {/* Subtasks Collapsible Section */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <label className="text-caption font-bold text-secondary uppercase tracking-wide">Subtasks</label>
-              {canEditAll && (
+        {/* Media & Attachments Section */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Paperclip size={14} className="text-secondary" />
+              <label className="text-caption font-bold text-secondary uppercase tracking-wide">
+                Attachments & Feedback Media ({task.attachments?.length || 0})
+              </label>
+            </div>
+            {canEditAll && (
+              <div>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileUpload}
+                  multiple
+                  accept="image/*,video/*"
+                  className="hidden"
+                />
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  onClick={() => setAddingSubtask(!addingSubtask)}
-                  className="text-brand-pink hover:text-brand-pink/80 rounded-lg cursor-pointer h-7 text-[11px] font-bold"
+                  disabled={uploadingAttachment}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="text-brand-pink hover:text-brand-pink/80 rounded-lg cursor-pointer h-7 text-[11px] font-bold gap-1"
                 >
-                  <Plus size={12} /> Add Subtask
+                  {uploadingAttachment ? (
+                    <>
+                      <Loader2 size={12} className="animate-spin" /> Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload size={12} /> Upload Media
+                    </>
+                  )}
                 </Button>
-              )}
-            </div>
-
-            {addingSubtask && (
-              <form onSubmit={handleAddSubtask} className="flex gap-2">
-                <Input 
-                  placeholder="Subtask name..." 
-                  value={newSubtaskName}
-                  onChange={e => setNewSubtaskName(e.target.value)}
-                  className="bg-secondary border-slate-700/50 text-primary rounded-xl flex-1 focus:border-brand-pink"
-                />
-                <Button type="submit" size="sm" className="bg-brand-pink text-white rounded-xl">Save</Button>
-              </form>
+              </div>
             )}
-
-            <div className="space-y-2">
-              {task.subtasks && task.subtasks.length > 0 ? (
-                task.subtasks.map((sub: any) => (
-                  <div key={sub.id} className="flex items-center justify-between p-2.5 bg-secondary/20 border border-slate-700/10 rounded-xl hover:bg-secondary/40 transition-all">
-                    <span className="text-caption font-semibold text-primary">{sub.name}</span>
-                    <Badge variant="outline" className="text-[10px] font-bold" style={{ borderColor: `${sub.status?.color}40`, color: sub.status?.color }}>
-                      {sub.status?.name}
-                    </Badge>
-                  </div>
-                ))
-              ) : (
-                <div className="text-caption text-muted text-center py-2 border border-dashed border-slate-700/10 rounded-xl">
-                  No subtasks.
-                </div>
-              )}
-            </div>
           </div>
 
-          {/* Dependencies Collapsible Section */}
-          <div className="space-y-3">
-            <label className="text-caption font-bold text-secondary uppercase tracking-wide">Dependencies</label>
-            <div className="space-y-2">
-              {task.blocking && task.blocking.length > 0 ? (
-                task.blocking.map((dep: any) => (
-                  <div key={dep.id} className="flex items-center gap-2 p-2.5 bg-red-500/5 border border-red-500/10 rounded-xl">
-                    <AlertTriangle size={14} className="text-red-500 flex-shrink-0" />
-                    <span className="text-caption text-primary font-semibold flex-1 truncate">
-                      Blocks: {dep.depends_on?.name}
-                    </span>
-                    <Badge className="bg-red-500/20 text-red-500 border border-red-500/30 text-[9px] font-bold">
-                      {dep.depends_on?.status?.name}
-                    </Badge>
-                  </div>
-                ))
-              ) : null}
+          {/* Attachment list & media viewer */}
+          {task.attachments && task.attachments.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {task.attachments.map((att: any) => {
+                const isVid = att.category === 'video' || att.type?.startsWith('video/');
+                const isImg = att.category === 'image' || att.type?.startsWith('image/');
 
-              {task.dependencies && task.dependencies.length > 0 ? (
-                task.dependencies.map((dep: any) => (
-                  <div key={dep.id} className="flex items-center gap-2 p-2.5 bg-amber-500/5 border border-amber-500/10 rounded-xl">
-                    <Lock size={14} className="text-amber-500 flex-shrink-0" />
-                    <span className="text-caption text-primary font-semibold flex-1 truncate">
-                      Waiting on: {dep.task?.name}
-                    </span>
-                    <Badge className="bg-amber-500/20 text-amber-500 border border-amber-500/30 text-[9px] font-bold">
-                      {dep.task?.status?.name}
-                    </Badge>
-                  </div>
-                ))
-              ) : null}
+                return (
+                  <div key={att.id} className="relative group bg-secondary/30 border border-slate-700/30 rounded-xl overflow-hidden flex flex-col justify-between">
+                    {/* Media Preview */}
+                    <div className="bg-black/40 flex items-center justify-center relative min-h-[120px] max-h-[160px] overflow-hidden">
+                      {isImg && (
+                        <img 
+                          src={att.url} 
+                          alt={att.name} 
+                          className="w-full h-full object-cover max-h-[160px]" 
+                        />
+                      )}
+                      {isVid && (
+                        <video 
+                          src={att.url} 
+                          controls 
+                          className="w-full max-h-[160px] bg-black"
+                          preload="metadata"
+                        />
+                      )}
+                      {!isImg && !isVid && (
+                        <FileText size={36} className="text-secondary" />
+                      )}
+                    </div>
 
-              {(!task.blocking || task.blocking.length === 0) && (!task.dependencies || task.dependencies.length === 0) && (
-                <div className="text-caption text-muted text-center py-2 border border-dashed border-slate-700/10 rounded-xl">
-                  No task dependencies.
-                </div>
-              )}
+                    {/* Meta & Actions */}
+                    <div className="p-2.5 flex items-center justify-between gap-2 bg-secondary/20">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-caption font-bold text-primary truncate" title={att.name}>
+                          {att.name}
+                        </p>
+                        <p className="text-[10px] text-muted">
+                          {formatFileSize(att.size)} {att.created_at && `• ${formatDistanceToNow(new Date(att.created_at), { addSuffix: true })}`}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-1">
+                        <a 
+                          href={att.url} 
+                          target="_blank" 
+                          rel="noreferrer" 
+                          download={att.name}
+                          className="p-1 rounded hover:bg-elevated text-secondary hover:text-primary transition-colors"
+                          title="Open / Download"
+                        >
+                          <ExternalLink size={13} />
+                        </a>
+                        {canEditAll && (
+                          <button
+                            onClick={() => handleDeleteAttachment(att.id)}
+                            className="p-1 rounded hover:bg-red-500/20 text-muted hover:text-red-400 transition-colors cursor-pointer"
+                            title="Delete"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
+          ) : (
+            <div 
+              onClick={() => canEditAll && fileInputRef.current?.click()}
+              className={`text-caption text-muted text-center py-4 border border-dashed border-slate-700/20 rounded-xl transition-all ${canEditAll ? 'hover:border-brand-pink/50 hover:bg-brand-pink/5 cursor-pointer' : ''}`}
+            >
+              <div className="flex flex-col items-center gap-1">
+                <Upload size={18} className="text-secondary/60" />
+                <span>No media attached yet.</span>
+                {canEditAll && <span className="text-[11px] text-brand-pink font-semibold">Click to upload photos or short video feedback</span>}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Subtasks Section with Full Create Modal */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="text-caption font-bold text-secondary uppercase tracking-wide">
+              Subtasks ({task.subtasks?.length || 0})
+            </label>
+            {canEditAll && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setSubtaskModalOpen(true)}
+                className="text-brand-pink hover:text-brand-pink/80 rounded-lg cursor-pointer h-7 text-[11px] font-bold gap-1"
+              >
+                <Plus size={12} /> Add Subtask
+              </Button>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            {task.subtasks && task.subtasks.length > 0 ? (
+              task.subtasks.map((sub: any) => (
+                <div key={sub.id} className="flex items-center justify-between p-2.5 bg-secondary/20 border border-slate-700/10 rounded-xl hover:bg-secondary/40 transition-all">
+                  <span className="text-caption font-semibold text-primary">{sub.name}</span>
+                  <Badge variant="outline" className="text-[10px] font-bold" style={{ borderColor: `${sub.status?.color}40`, color: sub.status?.color }}>
+                    {sub.status?.name}
+                  </Badge>
+                </div>
+              ))
+            ) : (
+              <div className="text-caption text-muted text-center py-2 border border-dashed border-slate-700/10 rounded-xl">
+                No subtasks.
+              </div>
+            )}
           </div>
         </div>
-      </ScrollArea>
+
+        {/* Dependencies Section */}
+        <div className="space-y-3">
+          <label className="text-caption font-bold text-secondary uppercase tracking-wide">Dependencies</label>
+          <div className="space-y-2">
+            {task.blocking && task.blocking.length > 0 ? (
+              task.blocking.map((dep: any) => (
+                <div key={dep.id} className="flex items-center gap-2 p-2.5 bg-red-500/5 border border-red-500/10 rounded-xl">
+                  <AlertTriangle size={14} className="text-red-500 flex-shrink-0" />
+                  <span className="text-caption text-primary font-semibold flex-1 truncate">
+                    Blocks: {dep.depends_on?.name}
+                  </span>
+                  <Badge className="bg-red-500/20 text-red-500 border border-red-500/30 text-[9px] font-bold">
+                    {dep.depends_on?.status?.name}
+                  </Badge>
+                </div>
+              ))
+            ) : null}
+
+            {task.dependencies && task.dependencies.length > 0 ? (
+              task.dependencies.map((dep: any) => (
+                <div key={dep.id} className="flex items-center gap-2 p-2.5 bg-amber-500/5 border border-amber-500/10 rounded-xl">
+                  <Lock size={14} className="text-amber-500 flex-shrink-0" />
+                  <span className="text-caption text-primary font-semibold flex-1 truncate">
+                    Waiting on: {dep.task?.name}
+                  </span>
+                  <Badge className="bg-amber-500/20 text-amber-500 border border-amber-500/30 text-[9px] font-bold">
+                    {dep.task?.status?.name}
+                  </Badge>
+                </div>
+              ))
+            ) : null}
+
+            {(!task.blocking || task.blocking.length === 0) && (!task.dependencies || task.dependencies.length === 0) && (
+              <div className="text-caption text-muted text-center py-2 border border-dashed border-slate-700/10 rounded-xl">
+                No task dependencies.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* Footer Comments Thread */}
-      <div className="p-4 border-t border-slate-700/20 bg-elevated/40 flex flex-col max-h-72">
+      <div className="p-4 border-t border-slate-700/20 bg-elevated/40 flex flex-col max-h-72 shrink-0">
         <span className="text-caption font-bold text-secondary uppercase tracking-wide mb-2">Comments</span>
         
         {/* Comment Thread List */}
@@ -594,6 +778,20 @@ export function TaskDetailPanel({
           </Button>
         </form>
       </div>
+
+      {/* Subtask Full Creation Modal */}
+      {subtaskModalOpen && (
+        <TaskCreateModal
+          open={subtaskModalOpen}
+          onOpenChange={setSubtaskModalOpen}
+          statuses={task.list?.statuses || []}
+          members={members}
+          defaultStatusId={task.status_id}
+          parentTaskId={taskId}
+          parentTaskName={task.name}
+          onCreateTask={handleCreateSubtask}
+        />
+      )}
     </SheetContent>
   );
 }
