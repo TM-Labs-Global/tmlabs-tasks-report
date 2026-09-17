@@ -3,10 +3,30 @@ import { cookies } from 'next/headers';
 import { verifySession } from '@/shared/utils/session';
 import { getDb } from '@/shared/utils/mongoClient';
 
-export async function GET() {
+export async function GET(request?: Request) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('session_token')?.value;
+    let token: string | undefined;
+
+    try {
+      const cookieStore = await cookies();
+      token = cookieStore.get('session_token')?.value;
+    } catch {}
+
+    if (!token && request) {
+      const cookieHeader = request.headers.get('cookie') || '';
+      const parsedCookies = Object.fromEntries(
+        cookieHeader.split(';').map(c => c.trim().split('='))
+      );
+      token = parsedCookies['session_token'];
+    }
+
+    if (!token && request) {
+      const authHeader = request.headers.get('authorization') || '';
+      if (authHeader.startsWith('Bearer ')) {
+        token = authHeader.slice(7).trim();
+      }
+    }
+
     if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const session = await verifySession(token);
     if (!session) return NextResponse.json({ error: 'Invalid session' }, { status: 401 });

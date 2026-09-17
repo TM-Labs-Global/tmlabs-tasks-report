@@ -42,7 +42,19 @@ export function useFilteredTasks() {
         const end = new Date(endStr).getTime();
         
         const taskDueDate = task.due_date_raw || (task.dueDate ? new Date(task.dueDate).getTime() : null);
-        const taskClosedDate = task.date_closed ? parseInt(task.date_closed) : null;
+        let taskClosedDate: number | null = null;
+        if (task.date_closed) {
+          if (typeof task.date_closed === 'number') {
+            taskClosedDate = task.date_closed;
+          } else if (typeof task.date_closed === 'string') {
+            if (/^\d+$/.test(task.date_closed)) {
+              taskClosedDate = parseInt(task.date_closed, 10);
+            } else {
+              const d = new Date(task.date_closed).getTime();
+              taskClosedDate = isNaN(d) ? null : d;
+            }
+          }
+        }
         
         const dueInRange = taskDueDate && taskDueDate >= start && taskDueDate <= end;
         const closedInRange = taskClosedDate && taskClosedDate >= start && taskClosedDate <= end;

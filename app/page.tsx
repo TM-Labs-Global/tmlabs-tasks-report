@@ -138,19 +138,33 @@ export default function Home() {
   const spilloversTasks = tasks.filter(t => t.flags.isSpillover);
   const spillovers = spilloversTasks.length;
   
+  const parseTaskClosedDate = (dateVal: any): Date | null => {
+    if (!dateVal) return null;
+    if (typeof dateVal === 'number') return new Date(dateVal);
+    if (typeof dateVal === 'string') {
+      if (/^\d+$/.test(dateVal)) {
+        const num = parseInt(dateVal, 10);
+        return isNaN(num) ? null : new Date(num);
+      }
+      const d = new Date(dateVal);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    return null;
+  };
+
   const completedThisWeekTasks = tasks.filter(t => {
     const isDone = t.status.toLowerCase().includes('complete') || t.status.toLowerCase().includes('done') || t.status.toLowerCase().includes('closed');
     if (!isDone || !t.date_closed) return false;
-    const closedDate = new Date(parseInt(t.date_closed));
-    return closedDate >= weekAgo;
+    const closedDate = parseTaskClosedDate(t.date_closed);
+    return closedDate ? closedDate >= weekAgo : false;
   });
   const completedThisWeek = completedThisWeekTasks.length;
 
   const completedThisMonthTasks = tasks.filter(t => {
     const isDone = t.status.toLowerCase().includes('complete') || t.status.toLowerCase().includes('done') || t.status.toLowerCase().includes('closed');
     if (!isDone || !t.date_closed) return false;
-    const closedDate = new Date(parseInt(t.date_closed));
-    return closedDate >= monthAgo;
+    const closedDate = parseTaskClosedDate(t.date_closed);
+    return closedDate ? closedDate >= monthAgo : false;
   });
   const completedThisMonth = completedThisMonthTasks.length;
 
@@ -202,8 +216,8 @@ export default function Home() {
 
     const count = tasks.filter(t => {
       if (!t.date_closed) return false;
-      const closed = new Date(parseInt(t.date_closed));
-      return closed >= start && closed < end;
+      const closed = parseTaskClosedDate(t.date_closed);
+      return closed ? closed >= start && closed < end : false;
     }).length;
 
     return { label: `W${i+1}`, value: count };

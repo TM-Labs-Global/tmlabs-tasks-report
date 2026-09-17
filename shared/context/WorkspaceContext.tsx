@@ -26,34 +26,53 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     const weekAgo = now - 7 * 24 * 60 * 60 * 1000;
 
     const dueDateMs = dbTask.due_date ? new Date(dbTask.due_date).getTime() : null;
-    const isClosed = dbTask.status?.type === 'closed';
+    const statusName = typeof dbTask.status === 'object' && dbTask.status ? (dbTask.status.name || 'todo') : (dbTask.status || 'todo');
+    const statusType = typeof dbTask.status === 'object' && dbTask.status ? (dbTask.status.type || 'open') : (dbTask.status_type || 'open');
+    const isClosed = statusType === 'closed' || statusName.toLowerCase().includes('complete') || statusName.toLowerCase().includes('done') || statusName.toLowerCase().includes('closed');
 
     let priorityId: 1 | 2 | 3 | 4 | null = null;
-    if (dbTask.priority === 'urgent') priorityId = 1;
-    else if (dbTask.priority === 'high') priorityId = 2;
-    else if (dbTask.priority === 'normal') priorityId = 3;
-    else if (dbTask.priority === 'low') priorityId = 4;
+    if (dbTask.priority === 'urgent' || dbTask.priority === 1 || dbTask.priority === '1') priorityId = 1;
+    else if (dbTask.priority === 'high' || dbTask.priority === 2 || dbTask.priority === '2') priorityId = 2;
+    else if (dbTask.priority === 'normal' || dbTask.priority === 3 || dbTask.priority === '3') priorityId = 3;
+    else if (dbTask.priority === 'low' || dbTask.priority === 4 || dbTask.priority === '4') priorityId = 4;
 
-    const resolvedAssignees = (dbTask.assignees || []).map((a: any) => ({
-      id: a.profile?.id,
-      username: a.profile?.full_name || a.profile?.email?.split('@')[0],
-      email: a.profile?.email,
-      profilePicture: a.profile?.avatar_url
-    }));
+    const resolvedAssignees = (dbTask.assignees || []).map((a: any) => {
+      const profile = a.profile || a.user || a;
+      return {
+        id: profile.id || profile._id || a.id || a.user_id,
+        username: profile.full_name || profile.name || profile.username || profile.email?.split('@')[0] || a.username || 'User',
+        email: profile.email || a.email,
+        profilePicture: profile.avatar_url || profile.profilePicture || profile.avatar || a.avatar_url
+      };
+    });
 
     const resolvedTags = (dbTask.tags || []).map((t: any) => ({
-      name: t.tag?.name,
-      color: t.tag?.color
+      name: t.tag?.name || t.name || String(t),
+      color: t.tag?.color || t.color || '#3B82F6'
     }));
+
+    let dateClosedMs: number | null = null;
+    if (dbTask.date_closed) {
+      if (typeof dbTask.date_closed === 'number') {
+        dateClosedMs = dbTask.date_closed;
+      } else if (typeof dbTask.date_closed === 'string') {
+        if (/^\d+$/.test(dbTask.date_closed)) {
+          dateClosedMs = parseInt(dbTask.date_closed, 10);
+        } else {
+          const parsed = new Date(dbTask.date_closed).getTime();
+          dateClosedMs = isNaN(parsed) ? null : parsed;
+        }
+      }
+    }
 
     return {
       ...dbTask,
-      id: dbTask.id,
-      name: dbTask.name,
-      status: dbTask.status?.name || 'todo',
-      status_type: dbTask.status?.type || 'open',
+      id: dbTask.id || dbTask._id,
+      name: dbTask.name || 'Untitled Task',
+      status: statusName,
+      status_type: statusType,
       priority: priorityId,
-      project: dbTask.list?.name || 'No List',
+      project: dbTask.list?.name || dbTask.list_name || dbTask.project || 'General Tasks',
       dueDate: dbTask.due_date ? new Date(dbTask.due_date).toLocaleDateString() : null,
       assignee: resolvedAssignees[0] ? {
         name: resolvedAssignees[0].username,
@@ -61,15 +80,16 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       } : undefined,
       assignees: resolvedAssignees,
       text_content: dbTask.description || '',
-      url: `/tasks/${dbTask.id}`,
+      url: `/tasks/${dbTask.id || dbTask._id}`,
       tags: resolvedTags,
       flags: {
-        isBlocked: dbTask.status?.type === 'blocked' || dbTask.status?.name?.toLowerCase().includes('blocked'),
+        isBlocked: statusType === 'blocked' || statusName.toLowerCase().includes('blocked'),
         isOverdue: dueDateMs && dueDateMs < now && !isClosed,
         isSpillover: dueDateMs && dueDateMs < now && dueDateMs > weekAgo && !isClosed,
       },
       start_date: dbTask.start_date ? new Date(dbTask.start_date).getTime() : null,
-      due_date_raw: dueDateMs
+      due_date_raw: dueDateMs,
+      date_closed: dateClosedMs ? String(dateClosedMs) : null
     };
   }, []);
 

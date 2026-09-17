@@ -310,7 +310,7 @@ export async function generateStyledReport(
           const currentDayDate = addDays(intervalStart, dayOfWeek);
           const start = task.start_date ? new Date(task.start_date) : null;
           const end = task.due_date_raw ? new Date(task.due_date_raw) : null;
-          const closed = task.date_closed ? new Date(parseInt(task.date_closed)) : null;
+          const closed = task.date_closed ? (typeof task.date_closed === 'number' ? new Date(task.date_closed) : (/^\d+$/.test(task.date_closed) ? new Date(parseInt(task.date_closed, 10)) : new Date(task.date_closed))) : null;
           
           let isActive = false;
           if (start && end && currentDayDate >= start && currentDayDate <= end) isActive = true;
