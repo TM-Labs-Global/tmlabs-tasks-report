@@ -163,6 +163,7 @@ export function TaskDetailPanel({
   const isAssigned = task.assignees?.some((a: any) => a.profile?.id === myProfile?.id);
   const canEditAll = isPM;
   const canEditStatus = isPM || isAssigned;
+  const canUpload = isPM || isAssigned || role === 'staff' || role === 'product_manager';
 
   const handleFieldUpdate = async (fields: Record<string, any>) => {
     try {
@@ -550,30 +551,30 @@ export function TaskDetailPanel({
                 Attachments & Feedback Media ({task.attachments?.length || 0})
               </label>
             </div>
-            {canEditAll && (
+            {canUpload && (
               <div>
                 <input
                   type="file"
                   ref={fileInputRef}
                   onChange={handleFileUpload}
                   multiple
-                  accept="image/*,video/*"
+                  accept="image/*,video/*,.pdf,.doc,.docx"
                   className="hidden"
                 />
                 <Button 
-                  variant="ghost" 
+                  variant="outline" 
                   size="sm" 
                   disabled={uploadingAttachment}
                   onClick={() => fileInputRef.current?.click()}
-                  className="text-brand-pink hover:text-brand-pink/80 rounded-lg cursor-pointer h-7 text-[11px] font-bold gap-1"
+                  className="bg-brand-pink/15 text-brand-pink hover:bg-brand-pink/25 border-brand-pink/30 rounded-lg cursor-pointer h-8 text-xs font-bold gap-1.5"
                 >
                   {uploadingAttachment ? (
                     <>
-                      <Loader2 size={12} className="animate-spin" /> Uploading...
+                      <Loader2 size={13} className="animate-spin" /> Uploading...
                     </>
                   ) : (
                     <>
-                      <Upload size={12} /> Upload Media
+                      <Upload size={13} /> Upload Media
                     </>
                   )}
                 </Button>
@@ -651,13 +652,13 @@ export function TaskDetailPanel({
             </div>
           ) : (
             <div 
-              onClick={() => canEditAll && fileInputRef.current?.click()}
-              className={`text-caption text-muted text-center py-4 border border-dashed border-slate-700/20 rounded-xl transition-all ${canEditAll ? 'hover:border-brand-pink/50 hover:bg-brand-pink/5 cursor-pointer' : ''}`}
+              onClick={() => canUpload && fileInputRef.current?.click()}
+              className={`text-caption text-slate-300 text-center py-5 border border-dashed border-slate-700/60 bg-slate-900/30 rounded-xl transition-all ${canUpload ? 'hover:border-brand-pink/60 hover:bg-brand-pink/5 cursor-pointer' : ''}`}
             >
-              <div className="flex flex-col items-center gap-1">
-                <Upload size={18} className="text-secondary/60" />
-                <span>No media attached yet.</span>
-                {canEditAll && <span className="text-[11px] text-brand-pink font-semibold">Click to upload photos or short video feedback</span>}
+              <div className="flex flex-col items-center gap-1.5">
+                <Upload size={20} className="text-brand-pink" />
+                <span className="font-semibold text-slate-200 text-xs">No media attached yet.</span>
+                {canUpload && <span className="text-[11px] text-brand-pink font-semibold">Click to upload photos, screenshots, or video feedback</span>}
               </div>
             </div>
           )}
